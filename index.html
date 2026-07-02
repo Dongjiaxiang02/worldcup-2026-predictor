@@ -32,8 +32,9 @@
   .tabs button:hover { color:var(--text); }
   .tabs button.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:700; }
 
-  .tab-content { display:none; }
+  .tab-content { display:none; animation:fadeIn 0.3s ease; }
   .tab-content.active { display:block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 
   .container { max-width:1000px; margin:0 auto; padding:16px; }
 
@@ -110,7 +111,9 @@
     min-height:54px; display:flex; flex-direction:column; justify-content:center;
   }
   .b-match:hover { border-color:var(--accent); z-index:3; box-shadow:0 0 12px rgba(56,189,248,0.15); }
-  .b-match.won { border-color:var(--green); }
+  .b-match.won { border-color:var(--green); background:rgba(74,222,128,0.04); }
+  .b-match.ready { border-color:var(--yellow); background:rgba(250,204,21,0.03); cursor:pointer; }
+  .b-match.ready:hover { border-color:var(--accent); }
   .b-match .b-team { display:flex; align-items:center; gap:5px; padding:2px 0; font-size:0.8rem; white-space:nowrap; }
   .b-match .b-flag { font-size:0.9rem; width:20px; text-align:center; flex-shrink:0; }
   .b-match .b-name { flex:1; overflow:hidden; text-overflow:ellipsis; }
@@ -121,9 +124,32 @@
   .b-match .b-info { font-size:0.68rem; color:var(--dim); text-align:center; }
   .b-match .b-time { color:var(--accent); }
 
-  .connectors { display:flex; flex-direction:column; justify-content:space-around; width:22px; flex-shrink:0; }
-  .conn-group { flex:1; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; }
-  .conn-group::after { content:''; width:10px; height:2px; background:var(--line); }
+  .connectors { display:flex; flex-direction:column; width:28px; flex-shrink:0; }
+  .conn-group { display:flex; align-items:center; justify-content:flex-end; position:relative; }
+  .conn-group::after { content:''; width:12px; height:2px; background:var(--line); margin-right:2px; }
+  .conn-group::before { content:''; position:absolute; right:12px; top:0; bottom:0; width:2px; background:var(--line); }
+
+  /* ── Stats ── */
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; margin-bottom:20px; }
+  .stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; text-align:center; }
+  .stat-card .stat-icon { font-size:2rem; margin-bottom:6px; }
+  .stat-card .stat-value { font-size:2rem; font-weight:800; color:var(--accent); }
+  .stat-card .stat-label { font-size:0.8rem; color:var(--dim); margin-top:4px; }
+  .stat-card.highlight { border-color:var(--yellow); }
+  .stat-card.highlight .stat-value { color:var(--yellow); }
+
+  .insight-list { display:flex; flex-direction:column; gap:10px; }
+  .insight-item { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 18px; display:flex; align-items:center; gap:12px; }
+  .insight-item .ins-icon { font-size:1.5rem; flex-shrink:0; }
+  .insight-item .ins-body { flex:1; }
+  .insight-item .ins-title { font-size:0.9rem; font-weight:600; }
+  .insight-item .ins-desc { font-size:0.8rem; color:var(--dim); margin-top:2px; }
+  .insight-item.upset { border-left:3px solid var(--red); }
+  .insight-item.highlight-ins { border-left:3px solid var(--yellow); }
+  .insight-item.neutral { border-left:3px solid var(--accent); }
+
+  .team-mini-list { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .team-mini { background:rgba(255,255,255,0.03); padding:6px 12px; border-radius:20px; font-size:0.82rem; display:flex; align-items:center; gap:5px; border:1px solid var(--border); }
 
   /* ── Modal ── */
   .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100; justify-content:center; align-items:center; padding:20px; }
@@ -158,6 +184,7 @@
   <div class="tabs">
     <button class="active" onclick="switchTab('daily')">📅 每日赛程</button>
     <button onclick="switchTab('bracket')">🏆 对战总览</button>
+    <button onclick="switchTab('stats')">📊 数据总览</button>
   </div>
 </div>
 
@@ -174,10 +201,15 @@
     <div class="bracket-wrap" id="bracketContent"></div>
   </div>
 
+  <!-- ═══════════ 数据总览 ═══════════ -->
+  <div class="tab-content" id="tab-stats">
+    <div id="statsContent"></div>
+  </div>
+
 </div>
 
-<div class="footer">
-  ⚠️ 预测仅供参考 | 📊 数据: FIFA 2026/06排名 + FOX Sports 赛程 | 点击对战总览中任意场次查看预测
+<div class="footer" id="footer">
+  ⚠️ 预测仅供参考 | 📊 数据: FIFA 2026/06排名 + Elo评分 + 泊松分布 | 点击对战总览中任意场次查看预测
 </div>
 
 <!-- ── 预测弹窗 ── -->
@@ -196,6 +228,8 @@ const FLAGS = {
   "瑞士":"🇨🇭","奥地利":"🇦🇹","韩国":"🇰🇷","澳大利亚":"🇦🇺","阿尔及利亚":"🇩🇿","埃及":"🇪🇬",
   "加拿大":"🇨🇦","挪威":"🇳🇴","科特迪瓦":"🇨🇮","瑞典":"🇸🇪","巴拉圭":"🇵🇾","塞尔维亚":"🇷🇸",
   "民主刚果":"🇨🇩","南非":"🇿🇦","波黑":"🇧🇦","佛得角":"🇨🇻","加纳":"🇬🇭",
+  "厄瓜多尔":"🇪🇨","丹麦":"🇩🇰","伊朗":"🇮🇷","土耳其":"🇹🇷","智利":"🇨🇱",
+  "喀麦隆":"🇨🇲","突尼斯":"🇹🇳","尼日利亚":"🇳🇬","乌克兰":"🇺🇦","波兰":"🇵🇱",
 };
 
 const FIFA_RANK = {
@@ -204,6 +238,8 @@ const FIFA_RANK = {
   "美国":17,"日本":18,"瑞士":19,"奥地利":24,"韩国":25,"澳大利亚":27,"阿尔及利亚":28,
   "埃及":29,"加拿大":30,"挪威":31,"科特迪瓦":33,"瑞典":38,"巴拉圭":41,"塞尔维亚":43,
   "民主刚果":46,"南非":60,"波黑":64,"佛得角":67,"加纳":73,
+  "厄瓜多尔":23,"丹麦":21,"土耳其":22,"伊朗":20,"尼日利亚":26,
+  "乌克兰":32,"喀麦隆":44,"突尼斯":45,"智利":50,"波兰":35,
 };
 
 // R32 比赛数据 — 所有时间已转为北京时间 (ET+12h)
@@ -225,6 +261,32 @@ const R32 = [
   { id:"M87", date:"07-04", time:"10:00", home:"阿根廷", away:"佛得角", venue:"Miami" },
   { id:"M88", date:"07-04", time:"13:30", home:"哥伦比亚", away:"加纳", venue:"Kansas City" },
 ];
+
+// 淘汰赛赛程 (北京时间, 基于FIFA官方赛程)
+const KNOCKOUT = {
+  r16: [
+    { id:"M89", date:"07-05", time:"01:00", venue:"Los Angeles" },
+    { id:"M90", date:"07-05", time:"05:00", venue:"Vancouver" },
+    { id:"M91", date:"07-06", time:"01:00", venue:"Houston" },
+    { id:"M92", date:"07-06", time:"05:00", venue:"Dallas" },
+    { id:"M93", date:"07-07", time:"01:00", venue:"Atlanta" },
+    { id:"M94", date:"07-07", time:"05:00", venue:"Seattle" },
+    { id:"M95", date:"07-08", time:"07:00", venue:"Mexico City" },
+    { id:"M96", date:"07-08", time:"11:00", venue:"Miami" },
+  ],
+  qf: [
+    { id:"M97", date:"07-10", time:"08:00", venue:"Boston" },
+    { id:"M98", date:"07-10", time:"11:00", venue:"Los Angeles" },
+    { id:"M99", date:"07-11", time:"08:00", venue:"Kansas City" },
+    { id:"M100", date:"07-11", time:"11:00", venue:"Miami" },
+  ],
+  sf: [
+    { id:"M101", date:"07-14", time:"08:00", venue:"Dallas" },
+    { id:"M102", date:"07-15", time:"08:00", venue:"Atlanta" },
+  ],
+  final: { id:"M103", date:"07-19", time:"08:00", venue:"MetLife Stadium, NY/NJ" },
+  third: { id:"M104", date:"07-18", time:"08:00", venue:"Miami" },
+};
 
 // ================================================================
 // PREDICTION ENGINE
@@ -269,12 +331,14 @@ function switchTab(name) {
   document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
-  document.querySelector(`.tabs button:${name==='daily'?'first-child':'last-child'}`);
   // find by text
   document.querySelectorAll('.tabs button').forEach(b => {
-    if ((name==='daily' && b.textContent.includes('每日')) || (name==='bracket' && b.textContent.includes('总览'))) b.classList.add('active');
+    if ((name==='daily' && b.textContent.includes('每日')) ||
+        (name==='bracket' && b.textContent.includes('对战')) ||
+        (name==='stats' && b.textContent.includes('数据'))) b.classList.add('active');
   });
   if (name === 'bracket') renderBracket();
+  if (name === 'stats') renderStats();
 }
 
 // ================================================================
@@ -347,7 +411,13 @@ function renderDateNav(cur) {
     const pad=n=>String(n).padStart(2,'0');
     const s = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
     const fd = formatDate(s);
-    html += `<button class="${s===cur?'active':''}" onclick="loadDaily('${s}')">${fd.m}/${fd.d} ${fd.wd}${s===today?' 🔴':''}</button>`;
+    const count = R32.filter(m => {
+      const dd = `2026-${m.date}`;
+      return dd === s;
+    }).length;
+    const liveDot = s===today ? ' 🔴' : '';
+    const countBadge = count > 0 ? ` <span style="font-size:0.7rem;opacity:0.7">(${count}场)</span>` : '';
+    html += `<button class="${s===cur?'active':''}" onclick="loadDaily('${s}')">${fd.m}/${fd.d} ${fd.wd}${liveDot}${countBadge}</button>`;
   }
   return html;
 }
@@ -369,11 +439,14 @@ function loadDaily(dateStr) {
 // BRACKET VIEW
 // ================================================================
 function getWinner(m) {
+  if (!m) return null;
   if (m.winner) return m.winner;
   if (!m.score) return null;
   try {
     const s = m.score.replace(/\(点.*?\)/g,'').trim().split('-');
-    return parseInt(s[0])>parseInt(s[1]) ? m.home : parseInt(s[1])>parseInt(s[0]) ? m.away : null;
+    const h=parseInt(s[0]), a=parseInt(s[1]);
+    if (isNaN(h)||isNaN(a)) return null;
+    return h>a ? m.home : a>h ? m.away : null;
   } catch(e) { return null; }
 }
 
@@ -383,101 +456,286 @@ function getLoser(m) {
   return w === m.home ? m.away : m.home;
 }
 
+function getScoreParts(m) {
+  if (!m || !m.score) return [null,null];
+  try {
+    const s = m.score.replace(/\(点.*?\)/g,'').trim().split('-');
+    return [parseInt(s[0]), parseInt(s[1])];
+  } catch(e) { return [null,null]; }
+}
+
 function bTeamRow(team, isW, score) {
   const f = FLAGS[team]||'🌍';
   return `<div class="b-team"><span class="b-flag">${f}</span><span class="b-name">${team}</span>${score!==undefined?`<span class="b-score ${isW?'w':'l'}">${score}</span>`:''}</div>`;
 }
 
 function bracketMatchBox(m, idx) {
-  if (!m || m.home==='待定') return `<div class="b-match"><div class="b-tbd">待定</div></div>`;
-  const w = getWinner(m), l = getLoser(m), done = !!m.score;
+  if (!m || (m.home==='待定' && m.away==='待定')) {
+    return `<div class="b-match"><div class="b-tbd">待定</div></div>`;
+  }
+  const w = getWinner(m), done = !!m.score;
   const hW = w===m.home, aW = w===m.away;
-  const hs = m.score ? m.score.replace(/\(点.*?\)/g,'').trim().split('-')[0] : undefined;
-  const as = m.score ? m.score.replace(/\(点.*?\)/g,'').trim().split('-')[1] : undefined;
-  const cls = done ? ' won' : '';
-  const onclick = m.home!=='待定' ? ` onclick="openPrediction('${m.home}','${m.away}','${m.id||''}','${m.time||''}','${m.venue||''}','${m.score||''}')"` : '';
+  const [hs, as] = getScoreParts(m);
+  const cls = done ? ' won' : (!m.home.includes('待定')&&!m.away.includes('待定') ? ' ready' : '');
+  const onclick = (m.home!=='待定'||m.away!=='待定') ? ` onclick="openPrediction('${m.home}','${m.away}','${m.id||''}','${m.time||''}','${m.venue||''}','${m.score||''}')"` : '';
+  const dateInfo = m.date ? `${m.date} ${m.time}` : '';
   return `<div class="b-match${cls}"${onclick}>
     ${bTeamRow(m.home, hW, hs)}${bTeamRow(m.away, aW, as)}
-    ${!done && m.time ? `<div class="b-info"><span class="b-time">🕐 ${m.date||''} ${m.time}</span></div>` : ''}
+    ${!done && dateInfo ? `<div class="b-info"><span class="b-time">🕐 ${dateInfo}</span></div>` : ''}
+    ${!done && !dateInfo && m.id ? `<div class="b-info"><span class="b-time">${m.id}</span></div>` : ''}
     ${done && m.score ? `<div class="b-info">${m.score}</div>` : ''}
   </div>`;
 }
 
+// 半区标签
+const BRACKET_LABELS = ['上半区','下半区','上半区','下半区'];
+
 function renderBracket() {
-  const r32Winners = R32.map(m => ({ winner: getWinner(m), loser: getLoser(m), match: m, done: !!m.score }));
+  // ── Step 1: R32 results ──
+  const r32Res = R32.map(m => ({ winner: getWinner(m), loser: getLoser(m), match: m, done: !!m.score }));
 
+  // ── Step 2: Build R16 (dynamic from R32 winners) ──
   const R16_P = [[0,2],[1,3],[4,6],[5,7],[8,10],[9,11],[12,14],[13,15]];
-  const r16 = R16_P.map(([i,j]) => ({
-    home: r32Winners[i].winner||'待定', away: r32Winners[j].winner||'待定',
-    id: `R16-${i+1}`, from: `${R32[i].id} vs ${R32[j].id}`, date:'', time:'', venue:'', score:null
-  }));
+  const r16 = R16_P.map(([i,j], idx) => {
+    const sched = KNOCKOUT.r16[idx];
+    return {
+      home: r32Res[i].winner || '待定', away: r32Res[j].winner || '待定',
+      id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
+      score: null,
+    };
+  });
 
+  // ── Step 3: Build QF (all TBD, will populate as R16 completes) ──
   const QF_P = [[0,1],[2,3],[4,5],[6,7]];
-  const qf = QF_P.map(([i,j]) => ({home:'待定',away:'待定',id:`QF-${i+1}`,date:'',time:'',venue:'',score:null}));
+  const qf = QF_P.map(([i,j], idx) => {
+    const sched = KNOCKOUT.qf[idx];
+    return {
+      home: '待定', away: '待定',
+      id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
+      score: null,
+    };
+  });
 
-  const sf = [[0,1],[2,3]].map(([i,j],k) => ({home:'待定',away:'待定',id:`SF-${k+1}`,date:'',time:'',venue:'',score:null}));
-  const final = {home:'待定',away:'待定',id:'FINAL',date:'',time:'',venue:'MetLife NY/NJ',score:null};
-  const third = {home:'待定',away:'待定',id:'3RD',date:'',time:'',venue:'Miami',score:null,isThird:true};
+  // ── Step 4: SF ──
+  const sf = [[0,1],[2,3]].map(([i,j], idx) => {
+    const sched = KNOCKOUT.sf[idx];
+    return {
+      home: '待定', away: '待定',
+      id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
+      score: null,
+    };
+  });
 
-  // 计算 slot 高度比例
-  const r32Slots = R32.length; // 16
-  const r16Slots = r16.length; // 8
-  const qfSlots  = qf.length;  // 4
-  const sfSlots  = sf.length;  // 2
-  const fSlots   = 2;          // final + 3rd
+  // ── Step 5: Final & 3rd place ──
+  const final = { home:'待定', away:'待定', id:KNOCKOUT.final.id, date:KNOCKOUT.final.date, time:KNOCKOUT.final.time, venue:KNOCKOUT.final.venue, score:null };
+  const third = { home:'待定', away:'待定', id:KNOCKOUT.third.id, date:KNOCKOUT.third.date, time:KNOCKOUT.third.time, venue:KNOCKOUT.third.venue, score:null };
 
+  // ── Render ──
   let html = '<div class="bracket">';
 
-  // R32
+  // R32 — 16 slots, flex=1 each
   html += '<div class="round-col"><div class="round-label">32强</div>';
-  for (const m of R32) html += `<div class="slot">${bracketMatchBox(m)}</div>`;
+  for (let i = 0; i < R32.length; i++) {
+    html += `<div class="slot" style="flex:1">${bracketMatchBox(R32[i], i)}</div>`;
+  }
   html += '</div>';
 
-  // Connectors
-  html += '<div class="connectors">'+Array(8).fill('<div class="conn-group"></div>').join('')+'</div>';
+  // Connectors R32→R16: 8 pairs
+  html += renderConnectorCol(8);
 
-  // R16
-  html += '<div class="round-col" style="min-width:175px"><div class="round-label">16强 (7/4-7)</div>';
-  html += '<div style="flex:0.3"></div>';
-  for (const m of r16) html += `<div class="slot" style="flex:2">${bracketMatchBox(m)}</div>`;
-  html += '<div style="flex:0.3"></div>';
+  // R16 — 8 slots, flex=2 each (occupies same total height as 16 R32 slots)
+  html += '<div class="round-col"><div class="round-label">16强</div>';
+  html += '<div style="flex:0.5"></div>';
+  for (let i = 0; i < r16.length; i++) {
+    html += `<div class="slot" style="flex:2">${bracketMatchBox(r16[i], i)}</div>`;
+  }
+  html += '<div style="flex:0.5"></div>';
   html += '</div>';
 
-  // Connectors
-  html += '<div class="connectors">'+Array(4).fill('<div class="conn-group"></div>').join('')+'</div>';
+  // Connectors R16→QF: 4 pairs
+  html += renderConnectorCol(4);
 
-  // QF
-  html += '<div class="round-col" style="min-width:175px"><div class="round-label">八强 (7/9-11)</div>';
-  html += '<div style="flex:0.7"></div>';
-  for (const m of qf) html += `<div class="slot" style="flex:4">${bracketMatchBox(m)}</div>`;
-  html += '<div style="flex:0.7"></div>';
-  html += '</div>';
-
-  // Connectors
-  html += '<div class="connectors">'+Array(2).fill('<div class="conn-group"></div>').join('')+'</div>';
-
-  // SF
-  html += '<div class="round-col" style="min-width:175px"><div class="round-label">半决赛 (7/14-15)</div>';
-  html += '<div style="flex:1.5"></div>';
-  for (const m of sf) html += `<div class="slot" style="flex:8">${bracketMatchBox(m)}</div>`;
-  html += '<div style="flex:1.5"></div>';
-  html += '</div>';
-
-  // Connectors
-  html += '<div class="connectors">'+Array(1).fill('<div class="conn-group"></div>').join('')+'</div>';
-
-  // Final
-  html += '<div class="round-col wide"><div class="round-label final-label">🏆 决赛 7/19</div>';
-  html += '<div style="flex:2"></div>';
-  html += `<div class="slot" style="flex:16">${bracketMatchBox(final)}</div>`;
+  // QF — 4 slots, flex=4 each
+  html += '<div class="round-col"><div class="round-label">¼决赛</div>';
   html += '<div style="flex:1"></div>';
-  html += '<div style="text-align:center;color:var(--dim);font-size:0.75rem;padding:4px">🥉 三四名 7/18</div>';
-  html += `<div class="slot" style="flex:8">${bracketMatchBox(third)}</div>`;
+  for (let i = 0; i < qf.length; i++) {
+    html += `<div class="slot" style="flex:4">${bracketMatchBox(qf[i], i)}</div>`;
+  }
+  html += '<div style="flex:1"></div>';
+  html += '</div>';
+
+  // Connectors QF→SF: 2 pairs
+  html += renderConnectorCol(2);
+
+  // SF — 2 slots, flex=8 each
+  html += '<div class="round-col"><div class="round-label">半决赛</div>';
+  html += '<div style="flex:2"></div>';
+  for (let i = 0; i < sf.length; i++) {
+    html += `<div class="slot" style="flex:8">${bracketMatchBox(sf[i], i)}</div>`;
+  }
   html += '<div style="flex:2"></div>';
   html += '</div>';
 
+  // Connectors SF→Final: 1 pair
+  html += renderConnectorCol(1);
+
+  // Final + 3rd place
+  html += '<div class="round-col wide"><div class="round-label final-label">🏆 决赛 7/19</div>';
+  html += '<div style="flex:3"></div>';
+  html += `<div class="slot" style="flex:16">${bracketMatchBox(final, 0)}</div>`;
+  html += '<div style="flex:2"></div>';
+  html += '<div style="text-align:center;color:var(--dim);font-size:0.75rem;padding:6px 0">🥉 三四名决赛 7/18</div>';
+  html += `<div class="slot" style="flex:8">${bracketMatchBox(third, 0)}</div>`;
+  html += '<div style="flex:3"></div>';
   html += '</div>';
+
+  html += '</div>';
+
+  // ── 半区指示 ──
+  html += '<div style="display:flex;justify-content:center;gap:40px;padding:8px 0 16px;flex-wrap:wrap">';
+  html += '<span style="color:var(--accent);font-size:0.8rem">⬆ 上半区 (左)</span>';
+  html += '<span style="color:var(--yellow);font-size:0.8rem">⬇ 下半区 (右)</span>';
+  html += '</div>';
+
   document.getElementById('bracketContent').innerHTML = html;
+}
+
+function renderConnectorCol(count) {
+  let h = '<div class="connectors">';
+  for (let i = 0; i < count; i++) {
+    h += '<div class="conn-group" style="flex:' + (16/count) + '"></div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+// ================================================================
+// STATS VIEW
+// ================================================================
+function renderStats() {
+  const done = R32.filter(m => !!m.score);
+  const todo = R32.filter(m => !m.score);
+  const allWinners = done.map(m => getWinner(m)).filter(Boolean);
+
+  // 总进球
+  let totalGoals = 0;
+  done.forEach(m => {
+    const [h,a] = getScoreParts(m);
+    if (h!==null && a!==null) totalGoals += h + a;
+  });
+
+  // 冷门: 低排名球队击败高排名球队 (排名数字大=排名低)
+  const upsets = [];
+  done.forEach(m => {
+    const w = getWinner(m);
+    const l = getLoser(m);
+    if (!w || !l) return;
+    const rW = FIFA_RANK[w] || 999;
+    const rL = FIFA_RANK[l] || 999;
+    if (rW > rL) upsets.push({ winner:w, loser:l, wRank:rW, lRank:rL, match:m });
+  });
+
+  // 进球最多的球队
+  const teamGoals = {};
+  done.forEach(m => {
+    const [h,a] = getScoreParts(m);
+    if (h!==null && a!==null) {
+      teamGoals[m.home] = (teamGoals[m.home]||0) + h;
+      teamGoals[m.away] = (teamGoals[m.away]||0) + a;
+    }
+  });
+  const topScorers = Object.entries(teamGoals).sort((a,b) => b[1]-a[1]).slice(0,5);
+
+  // 接下来最值得关注的比赛
+  const upcoming = todo.slice(0, 4);
+  const keyMatches = upcoming.map(m => {
+    const p = predict(m.home, m.away);
+    return { match:m, pred:p };
+  });
+
+  let html = '';
+
+  // ── 统计卡片 ──
+  html += '<div class="stats-grid">';
+  html += `<div class="stat-card"><div class="stat-icon">⚽</div><div class="stat-value">${totalGoals}</div><div class="stat-label">总进球数 (${done.length}场)</div></div>`;
+  html += `<div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value">${(totalGoals/done.length||0).toFixed(1)}</div><div class="stat-label">场均进球</div></div>`;
+  html += `<div class="stat-card"><div class="stat-icon">🏟️</div><div class="stat-value">${done.length}/16</div><div class="stat-label">32强已完赛</div></div>`;
+  html += `<div class="stat-card highlight"><div class="stat-icon">⚡</div><div class="stat-value">${upsets.length}</div><div class="stat-label">冷门场次</div></div>`;
+  html += `<div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value">${allWinners.length}</div><div class="stat-label">已晋级16强</div></div>`;
+  html += `<div class="stat-card"><div class="stat-icon">📅</div><div class="stat-value">${todo.length}</div><div class="stat-label">剩余R32比赛</div></div>`;
+  html += '</div>';
+
+  // ── 已晋级球队 ──
+  html += '<div class="section-title">🏆 已晋级16强球队</div>';
+  html += '<div class="team-mini-list">';
+  for (const w of allWinners) {
+    html += `<span class="team-mini">${FLAGS[w]||'🌍'} ${w} <span style="color:var(--dim);font-size:0.7rem">#${FIFA_RANK[w]||'?'}</span></span>`;
+  }
+  html += '</div>';
+
+  // ── 冷门 ──
+  if (upsets.length > 0) {
+    html += '<div class="section-title" style="margin-top:20px">⚡ 冷门预警</div>';
+    html += '<div class="insight-list">';
+    for (const u of upsets) {
+      html += `<div class="insight-item upset">
+        <div class="ins-icon">📉</div>
+        <div class="ins-body">
+          <div class="ins-title">${FLAGS[u.winner]||''} ${u.winner} (FIFA #${u.wRank}) 击败 ${FLAGS[u.loser]||''} ${u.loser} (FIFA #${u.lRank})</div>
+          <div class="ins-desc">排名差距: ${u.wRank - u.lRank} 位 · ${u.match.score} · ${u.match.venue}</div>
+        </div></div>`;
+    }
+    html += '</div>';
+  }
+
+  // ── 火力榜 ──
+  html += '<div class="section-title" style="margin-top:20px">🔥 进球最多</div>';
+  html += '<div class="team-mini-list">';
+  for (const [team, goals] of topScorers) {
+    html += `<span class="team-mini">${FLAGS[team]||'🌍'} ${team} <span style="color:var(--accent);font-weight:700">${goals}球</span></span>`;
+  }
+  html += '</div>';
+
+  // ── 关键前瞻 ──
+  if (keyMatches.length > 0) {
+    html += '<div class="section-title" style="margin-top:20px">🔮 焦点战前瞻</div>';
+    html += '<div class="insight-list">';
+    for (const {match:m, pred:p} of keyMatches) {
+      const fav = parseFloat(p.wp) > parseFloat(p.lp) ? m.home : m.away;
+      const favPct = Math.max(parseFloat(p.wp), parseFloat(p.lp));
+      html += `<div class="insight-item highlight-ins">
+        <div class="ins-icon">🤜</div>
+        <div class="ins-body">
+          <div class="ins-title">${FLAGS[m.home]||''} ${m.home} vs ${FLAGS[m.away]||''} ${m.away}</div>
+          <div class="ins-desc">🕐 ${m.date} ${m.time} · ${fav} 胜率 ${favPct}% · xG ${p.xgH}-${p.xgA} · ${p.verdict.text}</div>
+        </div></div>`;
+    }
+    html += '</div>';
+  }
+
+  // ── R16 预览 ──
+  const r16Ready = [];
+  const R16_P = [[0,2],[1,3],[4,6],[5,7],[8,10],[9,11],[12,14],[13,15]];
+  R16_P.forEach(([i,j], idx) => {
+    const h = getWinner(R32[i]), a = getWinner(R32[j]);
+    if (h && a) r16Ready.push({home:h, away:a, idx, sched:KNOCKOUT.r16[idx]});
+  });
+  if (r16Ready.length > 0) {
+    html += '<div class="section-title" style="margin-top:20px">🔗 已确定的16强对阵</div>';
+    html += '<div class="insight-list">';
+    for (const r of r16Ready) {
+      const p = predict(r.home, r.away);
+      html += `<div class="insight-item neutral">
+        <div class="ins-icon">⚔️</div>
+        <div class="ins-body">
+          <div class="ins-title">${FLAGS[r.home]||''} ${r.home} vs ${FLAGS[r.away]||''} ${r.away}</div>
+          <div class="ins-desc">${r.sched.id} · 🕐 ${r.sched.date} ${r.sched.time} · ${r.sched.venue} · 预测: ${p.verdict.text}</div>
+        </div></div>`;
+    }
+    html += '</div>';
+  }
+
+  document.getElementById('statsContent').innerHTML = html;
 }
 
 // ================================================================
@@ -548,11 +806,11 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 try {
   const params = new URLSearchParams(window.location.search);
   const initDate = params.get('date') || bjToday();
-  document.getElementById('dailyContent').innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim)">加载中... initDate=' + initDate + ' R32=' + R32.length + '场</div>';
   loadDaily(initDate);
   renderBracket();
+  renderStats();
 } catch(e) {
-  document.getElementById('dailyContent').innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">❌ JS错误: ' + e.message + '<br><pre style="font-size:0.75rem">' + e.stack + '</pre></div>';
+  document.getElementById('dailyContent').innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">❌ 加载错误: ' + e.message + '<br><pre style="font-size:0.75rem">' + e.stack + '</pre></div>';
 }
 </script>
 </body>
