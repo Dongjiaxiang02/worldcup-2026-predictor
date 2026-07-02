@@ -545,10 +545,15 @@ document.addEventListener('keydown', function(e) { if (e.key === 'Escape') close
 // ================================================================
 // INIT
 // ================================================================
-const params = new URLSearchParams(window.location.search);
-const initDate = params.get('date') || bjToday();
-loadDaily(initDate);
-renderBracket();
+try {
+  const params = new URLSearchParams(window.location.search);
+  const initDate = params.get('date') || bjToday();
+  document.getElementById('dailyContent').innerHTML = '<div style="text-align:center;padding:20px;color:var(--dim)">加载中... initDate=' + initDate + ' R32=' + R32.length + '场</div>';
+  loadDaily(initDate);
+  renderBracket();
+} catch(e) {
+  document.getElementById('dailyContent').innerHTML = '<div style="text-align:center;padding:20px;color:var(--red)">❌ JS错误: ' + e.message + '<br><pre style="font-size:0.75rem">' + e.stack + '</pre></div>';
+}
 </script>
 </body>
 </html>
