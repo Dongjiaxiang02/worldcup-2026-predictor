@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚽ 2026世界杯 — 赛程 & 预测</title>
+<style>
+  :root {
+    --bg: #0b1120; --card: #111827; --border: #1e293b;
+    --text: #e2e8f0; --dim: #64748b; --accent: #38bdf8;
+    --green: #4ade80; --yellow: #facc15; --red: #f87171;
+    --gold: #fbbf24; --line: #1e3a5f;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; }
+
+  /* ── Header ── */
+  .header {
+    background:linear-gradient(180deg, rgba(56,189,248,0.06) 0%, transparent 100%);
+    padding:20px 16px 12px; text-align:center; border-bottom:1px solid var(--border);
+  }
+  .header h1 { font-size:1.8rem; }
+  .header .sub { color:var(--dim); font-size:0.85rem; margin-top:4px; }
+
+  /* ── Tabs ── */
+  .tabs { display:flex; gap:2px; justify-content:center; margin:16px 0 0; }
+  .tabs button {
+    background:transparent; color:var(--dim); border:none;
+    padding:10px 28px; font-size:1rem; cursor:pointer;
+    border-bottom:2px solid transparent; transition:all 0.2s;
+  }
+  .tabs button:hover { color:var(--text); }
+  .tabs button.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:700; }
+
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  .container { max-width:1000px; margin:0 auto; padding:16px; }
+
+  /* ── Daily View ── */
+  .date-nav {
+    display:flex; gap:6px; align-items:center; justify-content:center;
+    margin-bottom:20px; flex-wrap:wrap;
+  }
+  .date-nav button {
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+    padding:7px 14px; border-radius:8px; cursor:pointer; font-size:0.85rem; transition:all 0.2s;
+  }
+  .date-nav button:hover { border-color:var(--accent); }
+  .date-nav button.active { background:var(--accent); color:#000; font-weight:bold; }
+  .section-title { font-size:0.9rem; color:var(--dim); margin:12px 0 8px; }
+
+  /* ── Match Card ── */
+  .match-card {
+    background:var(--card); border-radius:14px; padding:18px 22px;
+    margin-bottom:14px; border:1px solid var(--border); transition:border-color 0.2s;
+  }
+  .match-card:hover { border-color:var(--accent); }
+  .match-card .top-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px; }
+  .badge { font-size:0.78rem; padding:3px 10px; border-radius:20px; font-weight:600; }
+  .badge-done { background:#166534; color:#4ade80; }
+  .badge-upcoming { background:#1e3a5f; color:#38bdf8; }
+
+  .match-teams { display:flex; align-items:center; justify-content:center; gap:16px; margin:12px 0; flex-wrap:wrap; }
+  .team { text-align:center; min-width:90px; }
+  .team .flag { font-size:2rem; }
+  .team .name { font-size:1.2rem; font-weight:700; }
+  .team .rank { font-size:0.78rem; color:var(--dim); }
+  .vs { color:var(--dim); font-weight:700; font-size:1.1rem; }
+  .match-meta { text-align:center; color:var(--dim); font-size:0.82rem; margin:6px 0; }
+
+  .result-box { text-align:center; margin:10px 0; padding:10px; background:rgba(255,255,255,0.02); border-radius:10px; }
+  .result-box .score { font-size:1.8rem; font-weight:800; letter-spacing:3px; }
+  .result-box .winner { color:var(--green); font-size:0.9rem; margin-top:4px; }
+
+  /* ── Prob Bars ── */
+  .prob-section { margin-top:10px; }
+  .prob-bar { display:flex; align-items:center; gap:8px; margin:4px 0; }
+  .prob-bar .bar-label { width:80px; text-align:right; font-size:0.82rem; flex-shrink:0; }
+  .prob-bar .bar-track { flex:1; height:18px; background:rgba(255,255,255,0.04); border-radius:9px; overflow:hidden; }
+  .prob-bar .bar-fill { height:100%; border-radius:9px; }
+  .prob-bar .bar-pct { width:50px; font-size:0.82rem; font-weight:600; text-align:right; }
+  .bar-green .bar-fill { background:linear-gradient(90deg,#166534,#4ade80); }
+  .bar-yellow .bar-fill { background:linear-gradient(90deg,#713f12,#facc15); }
+  .bar-red .bar-fill { background:linear-gradient(90deg,#7f1d1d,#f87171); }
+
+  .xg-row { display:flex; justify-content:center; gap:20px; margin:10px 0; font-size:0.85rem; }
+  .xg-row .xg-val { font-size:1.3rem; font-weight:700; color:var(--accent); }
+  .top-scores { display:flex; gap:8px; justify-content:center; margin:10px 0; flex-wrap:wrap; }
+  .score-chip { background:rgba(255,255,255,0.04); padding:5px 12px; border-radius:20px; font-size:0.82rem; }
+  .score-chip.star { border:1px solid var(--accent); }
+  .verdict { text-align:center; margin-top:10px; font-weight:700; padding:6px; border-radius:8px; }
+  .verdict.win { color:var(--green); background:rgba(74,222,128,0.06); }
+  .verdict.close { color:var(--yellow); background:rgba(250,204,21,0.06); }
+
+  .empty-state { text-align:center; padding:50px; color:var(--dim); }
+  .empty-state .icon { font-size:3rem; }
+
+  /* ── Bracket View ── */
+  .bracket-wrap { overflow-x:auto; padding:8px 0; }
+  .bracket { display:flex; gap:0; min-width:fit-content; padding:8px 4px 16px; }
+  .round-col { display:flex; flex-direction:column; justify-content:space-around; min-width:165px; flex-shrink:0; }
+  .round-col.wide { min-width:200px; }
+  .round-label { text-align:center; font-weight:700; font-size:0.85rem; color:var(--accent); padding:6px 0; margin-bottom:2px; border-bottom:1px solid var(--line); letter-spacing:2px; }
+  .round-label.final-label { color:var(--gold); }
+  .slot { display:flex; flex-direction:column; justify-content:center; flex:1; padding:1px 0; }
+  .b-match {
+    background:var(--card); border:1px solid var(--border); border-radius:8px;
+    padding:6px 8px; margin:0 4px; cursor:pointer; transition:all 0.2s;
+    min-height:54px; display:flex; flex-direction:column; justify-content:center;
+  }
+  .b-match:hover { border-color:var(--accent); z-index:3; box-shadow:0 0 12px rgba(56,189,248,0.15); }
+  .b-match.won { border-color:var(--green); }
+  .b-match .b-team { display:flex; align-items:center; gap:5px; padding:2px 0; font-size:0.8rem; white-space:nowrap; }
+  .b-match .b-flag { font-size:0.9rem; width:20px; text-align:center; flex-shrink:0; }
+  .b-match .b-name { flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .b-match .b-score { font-weight:700; font-size:0.82rem; min-width:20px; text-align:center; }
+  .b-match .b-score.w { color:var(--green); }
+  .b-match .b-score.l { color:var(--red); }
+  .b-match .b-tbd { text-align:center; color:var(--dim); font-size:0.75rem; font-style:italic; }
+  .b-match .b-info { font-size:0.68rem; color:var(--dim); text-align:center; }
+  .b-match .b-time { color:var(--accent); }
+
+  .connectors { display:flex; flex-direction:column; justify-content:space-around; width:22px; flex-shrink:0; }
+  .conn-group { flex:1; display:flex; align-items:center; justify-content:flex-end; padding-right:8px; }
+  .conn-group::after { content:''; width:10px; height:2px; background:var(--line); }
+
+  /* ── Modal ── */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:100; justify-content:center; align-items:center; padding:20px; }
+  .modal-overlay.show { display:flex; }
+  .modal { background:var(--card); border-radius:18px; padding:24px; max-width:520px; width:100%; border:1px solid var(--border); max-height:90vh; overflow-y:auto; position:relative; }
+  .modal .close { position:absolute; top:12px; right:16px; background:none; border:none; color:var(--dim); font-size:1.5rem; cursor:pointer; }
+  .modal .close:hover { color:var(--text); }
+  .modal .m-teams { display:flex; align-items:center; justify-content:center; gap:16px; margin:12px 0; }
+  .modal .m-flag { font-size:2.5rem; }
+  .modal .m-name { font-size:1.4rem; font-weight:700; }
+  .modal .m-rank { font-size:0.85rem; color:var(--dim); }
+  .modal .m-vs { color:var(--dim); font-weight:700; }
+  .modal .m-meta { text-align:center; color:var(--dim); font-size:0.85rem; margin:8px 0; }
+
+  .footer { text-align:center; color:var(--dim); font-size:0.78rem; padding:20px; border-top:1px solid var(--border); margin-top:16px; }
+  .footer a { color:var(--accent); }
+
+  @media (max-width:600px) {
+    .header h1 { font-size:1.3rem; }
+    .match-card { padding:12px 10px; }
+    .team .name { font-size:1rem; }
+    .round-col { min-width:140px; }
+    .b-match .b-name { font-size:0.72rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚽ 2026世界杯</h1>
+  <div class="sub">北京时间 (UTC+8) · FIFA排名 + Elo评分 + 泊松分布</div>
+  <div class="tabs">
+    <button class="active" onclick="switchTab('daily')">📅 每日赛程</button>
+    <button onclick="switchTab('bracket')">🏆 对战总览</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════ 每日赛程 ═══════════ -->
+  <div class="tab-content active" id="tab-daily">
+    <div class="date-nav" id="dateNav"></div>
+    <div id="dailyContent"></div>
+  </div>
+
+  <!-- ═══════════ 对战总览 ═══════════ -->
+  <div class="tab-content" id="tab-bracket">
+    <div class="bracket-wrap" id="bracketContent"></div>
+  </div>
+
+</div>
+
+<div class="footer">
+  ⚠️ 预测仅供参考 | 📊 数据: FIFA 2026/06排名 + FOX Sports 赛程 | 点击对战总览中任意场次查看预测
+</div>
+
+<!-- ── 预测弹窗 ── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const FLAGS = {
+  "阿根廷":"🇦🇷","西班牙":"🇪🇸","法国":"🇫🇷","英格兰":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","葡萄牙":"🇵🇹","巴西":"🇧🇷",
+  "摩洛哥":"🇲🇦","荷兰":"🇳🇱","比利时":"🇧🇪","德国":"🇩🇪","克罗地亚":"🇭🇷","意大利":"🇮🇹",
+  "哥伦比亚":"🇨🇴","墨西哥":"🇲🇽","塞内加尔":"🇸🇳","乌拉圭":"🇺🇾","美国":"🇺🇸","日本":"🇯🇵",
+  "瑞士":"🇨🇭","奥地利":"🇦🇹","韩国":"🇰🇷","澳大利亚":"🇦🇺","阿尔及利亚":"🇩🇿","埃及":"🇪🇬",
+  "加拿大":"🇨🇦","挪威":"🇳🇴","科特迪瓦":"🇨🇮","瑞典":"🇸🇪","巴拉圭":"🇵🇾","塞尔维亚":"🇷🇸",
+  "民主刚果":"🇨🇩","南非":"🇿🇦","波黑":"🇧🇦","佛得角":"🇨🇻","加纳":"🇬🇭",
+};
+
+const FIFA_RANK = {
+  "阿根廷":1,"西班牙":2,"法国":3,"英格兰":4,"葡萄牙":5,"巴西":6,"摩洛哥":7,"荷兰":8,
+  "比利时":9,"德国":10,"克罗地亚":11,"哥伦比亚":13,"墨西哥":14,"塞内加尔":15,"乌拉圭":16,
+  "美国":17,"日本":18,"瑞士":19,"奥地利":24,"韩国":25,"澳大利亚":27,"阿尔及利亚":28,
+  "埃及":29,"加拿大":30,"挪威":31,"科特迪瓦":33,"瑞典":38,"巴拉圭":41,"塞尔维亚":43,
+  "民主刚果":46,"南非":60,"波黑":64,"佛得角":67,"加纳":73,
+};
+
+const R32 = [
+  { id:"M73", date:"06-28", time:"04:00", home:"南非", away:"加拿大", score:"0-1", venue:"Los Angeles" },
+  { id:"M74", date:"06-28", time:"08:00", home:"德国", away:"巴拉圭", score:"1-1 (点3-4)", venue:"Boston", winner:"巴拉圭" },
+  { id:"M75", date:"06-29", time:"04:00", home:"荷兰", away:"摩洛哥", score:"1-1 (点2-3)", venue:"Monterrey", winner:"摩洛哥" },
+  { id:"M76", date:"06-29", time:"07:00", home:"巴西", away:"日本", score:"2-1", venue:"Houston" },
+  { id:"M77", date:"06-29", time:"11:00", home:"科特迪瓦", away:"挪威", score:"1-2", venue:"Dallas" },
+  { id:"M78", date:"06-30", time:"04:00", home:"法国", away:"瑞典", score:"3-0", venue:"NY/NJ" },
+  { id:"M79", date:"06-30", time:"07:00", home:"墨西哥", away:"厄瓜多尔", score:"2-0", venue:"Mexico City" },
+  { id:"M80", date:"06-30", time:"11:00", home:"英格兰", away:"民主刚果", score:"2-1", venue:"Atlanta" },
+  { id:"M81", date:"07-01", time:"07:00", home:"美国", away:"波黑", score:"2-0", venue:"San Francisco" },
+  { id:"M82", date:"07-01", time:"11:00", home:"比利时", away:"塞内加尔", score:"3-2", venue:"Seattle" },
+  { id:"M83", date:"07-03", time:"03:00", home:"西班牙", away:"奥地利", venue:"Los Angeles (SoFi)" },
+  { id:"M84", date:"07-03", time:"07:00", home:"葡萄牙", away:"克罗地亚", venue:"Toronto" },
+  { id:"M85", date:"07-03", time:"11:00", home:"瑞士", away:"阿尔及利亚", venue:"Vancouver" },
+  { id:"M86", date:"07-04", time:"06:00", home:"澳大利亚", away:"埃及", venue:"Dallas" },
+  { id:"M87", date:"07-04", time:"10:00", home:"阿根廷", away:"佛得角", venue:"Miami" },
+  { id:"M88", date:"07-04", time:"13:30", home:"哥伦比亚", away:"加纳", venue:"Kansas City" },
+];
+
+// ================================================================
+// PREDICTION ENGINE
+// ================================================================
+const LEAGUE_AVG = 1.38, MAX_G = 7;
+
+function toElo(r) { return Math.round(2170 - (r - 1) * 4.2); }
+function poissonPmf(k, lam) {
+  if (k < 0 || lam <= 0) return k === 0 ? 1 : 0;
+  let lp = -lam + k * Math.log(lam);
+  for (let i = 2; i <= k; i++) lp -= Math.log(i);
+  return Math.exp(lp);
+}
+
+function predict(home, away) {
+  const eH = toElo(FIFA_RANK[home] || 100), eA = toElo(FIFA_RANK[away] || 100);
+  const rH = FIFA_RANK[home], rA = FIFA_RANK[away];
+  const expH = 1 / (1 + Math.pow(10, (eA - (eH + 32.5)) / 400));
+  const lamH = Math.max(0.3, Math.min(LEAGUE_AVG * (0.55 + 0.9 * expH), 4.5));
+  const lamA = Math.max(0.3, Math.min(LEAGUE_AVG * (0.55 + 0.9 * (1 - expH)), 4.5));
+  const ph = Array.from({length:MAX_G+1},(_,i)=>poissonPmf(i,lamH));
+  const pa = Array.from({length:MAX_G+1},(_,i)=>poissonPmf(i,lamA));
+  const scores = []; let win = 0, draw = 0;
+  for (let i=0;i<=MAX_G;i++) for (let j=0;j<=MAX_G;j++) {
+    const p = ph[i]*pa[j]; scores.push({s:`${i}-${j}`,p});
+    if (i>j) win+=p; else if (i===j) draw+=p;
+  }
+  const lose = Math.max(0, 1-win-draw), top3 = scores.sort((a,b)=>b.p-a.p).slice(0,3);
+  const wp=(win*100).toFixed(1), dp=(draw*100).toFixed(1), lp=(lose*100).toFixed(1);
+  let v,t,c;
+  if (wp>lp+5) { v=`🏆 ${home} 赢面更大`; c='win'; }
+  else if (lp>wp+5) { v=`🏆 ${away} 赢面更大`; c='win'; }
+  else if (dp>Math.max(wp,lp)) { v='🤝 平局可能最大, 或进加时'; c='close'; }
+  else { v='⚖️ 势均力敌'; c='close'; }
+  return {home,away,eH,eA,eDiff:eH-eA,rH,rA,wp,dp,lp,xgH:lamH.toFixed(2),xgA:lamA.toFixed(2),totalXg:(lamH+lamA).toFixed(2),top3:top3.map(x=>({s:x.s,p:(x.p*100).toFixed(2)})),verdict:{text:v,cls:c}};
+}
+
+// ================================================================
+// TAB SWITCH
+// ================================================================
+function switchTab(name) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  document.querySelector(`.tabs button:${name==='daily'?'first-child':'last-child'}`);
+  // find by text
+  document.querySelectorAll('.tabs button').forEach(b => {
+    if ((name==='daily' && b.textContent.includes('每日')) || (name==='bracket' && b.textContent.includes('总览'))) b.classList.add('active');
+  });
+  if (name === 'bracket') renderBracket();
+}
+
+// ================================================================
+// DAILY VIEW
+// ================================================================
+function bjToday() {
+  const d = new Date(Date.now() + 8*3600000);
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}`;
+}
+
+function formatDate(s) {
+  const [y,m,d] = s.split('-').map(Number);
+  const w = ['周日','周一','周二','周三','周四','周五','周六'];
+  return { full:s, wd:w[new Date(y,m-1,d).getDay()], m, d };
+}
+
+function getMatches(dateStr) {
+  return R32.filter(m => {
+    const dd = m.date.startsWith('06') ? `2026-${m.date}` : `2026-${m.date}`;
+    return dd === dateStr;
+  }).map(m => ({...m, dateFull: dateStr, done:!!m.score}));
+}
+
+function renderProbBar(label, pct, cls) {
+  return `<div class="prob-bar"><span class="bar-label">${label}</span><div class="bar-track ${cls}"><div class="bar-fill" style="width:${pct}%"></div></div><span class="bar-pct">${pct}%</span></div>`;
+}
+
+function renderMatchCard(m) {
+  const fH = FLAGS[m.home]||'', fA = FLAGS[m.away]||'';
+  if (m.done) {
+    let wHTML = '';
+    try {
+      const p = m.score.replace(/\(点.*?\)/g,'').trim().split('-');
+      if (parseInt(p[0]) > parseInt(p[1])) wHTML = `<div class="winner">🏆 ${m.home} 获胜</div>`;
+      else if (parseInt(p[1]) > parseInt(p[0])) wHTML = `<div class="winner">🏆 ${m.away} 获胜</div>`;
+      else if (m.winner) wHTML = `<div class="winner">🏆 ${m.winner} 获胜 (点球)</div>`;
+    } catch(e) {}
+    return `<div class="match-card">
+      <div class="top-row"><span class="badge badge-done">✅ 已完赛</span><span style="color:var(--dim);font-size:0.82rem">${m.id} · ${m.venue}</span></div>
+      <div class="match-teams"><div class="team"><div class="flag">${fH}</div><div class="name">${m.home}</div></div><div class="vs">VS</div><div class="team"><div class="flag">${fA}</div><div class="name">${m.away}</div></div></div>
+      <div class="match-meta">🕐 ${m.time} 北京时间</div>
+      <div class="result-box"><div class="score">${m.score}</div>${wHTML}</div></div>`;
+  }
+  const p = predict(m.home, m.away);
+  const ord = parseFloat(p.wp) >= parseFloat(p.lp)
+    ? [{l:`${m.home} 获胜`,pct:p.wp,c:'bar-green'},{l:'平局',pct:p.dp,c:'bar-yellow'},{l:`${m.away} 获胜`,pct:p.lp,c:'bar-red'}]
+    : [{l:`${m.home} 获胜`,pct:p.wp,c:'bar-red'},{l:'平局',pct:p.dp,c:'bar-yellow'},{l:`${m.away} 获胜`,pct:p.lp,c:'bar-green'}];
+  const chips = p.top3.map((x,i)=>`<span class="score-chip${i===0?' star':''}">${x.s} <span style="color:var(--dim);font-size:0.7rem">${x.p}%</span></span>`).join('');
+  return `<div class="match-card">
+    <div class="top-row"><span class="badge badge-upcoming">🔮 即将开赛</span><span style="color:var(--dim);font-size:0.82rem">${m.id} · ${m.venue}</span></div>
+    <div class="match-teams">
+      <div class="team"><div class="flag">${fH}</div><div class="name">${m.home}</div><div class="rank">FIFA #${p.rH||'?'} · Elo ${p.eH}</div></div>
+      <div class="vs">VS</div>
+      <div class="team"><div class="flag">${fA}</div><div class="name">${m.away}</div><div class="rank">FIFA #${p.rA||'?'} · Elo ${p.eA}</div></div>
+    </div>
+    <div class="match-meta">🕐 ${m.time} 北京时间 · Elo差 ${p.eDiff>0?'+':''}${p.eDiff}</div>
+    <div class="prob-section"><div style="font-size:0.82rem;color:var(--dim);margin-bottom:4px">📈 胜平负概率 (90分钟)</div>${ord.map(b=>renderProbBar(b.l,b.pct,b.c)).join('')}</div>
+    <div class="xg-row"><div>${m.home}<br><span class="xg-val">${p.xgH}</span></div><div style="align-self:center;color:var(--dim);font-size:0.8rem">xG<br>总≈${p.totalXg}</div><div>${m.away}<br><span class="xg-val">${p.xgA}</span></div></div>
+    <div class="top-scores"><span style="color:var(--dim);font-size:0.78rem;align-self:center">🎯 最可能比分:</span>${chips}</div>
+    <div class="verdict ${p.verdict.cls}">${p.verdict.text}</div></div>`;
+}
+
+function renderDateNav(cur) {
+  const dt = new Date(cur+'T00:00:00+08:00');
+  const today = bjToday();
+  let html = '';
+  for (let i=-2; i<=4; i++) {
+    const d = new Date(dt.getTime()+i*86400000);
+    const pad=n=>String(n).padStart(2,'0');
+    const s = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    const fd = formatDate(s);
+    html += `<button class="${s===cur?'active':''}" onclick="loadDaily('${s}')">${fd.m}/${fd.d} ${fd.wd}${s===today?' 🔴':''}</button>`;
+  }
+  return html;
+}
+
+function loadDaily(dateStr) {
+  document.getElementById('dateNav').innerHTML = renderDateNav(dateStr);
+  const ms = getMatches(dateStr);
+  if (!ms.length) {
+    document.getElementById('dailyContent').innerHTML = `<div class="empty-state"><div class="icon">📭</div><div>这天没有比赛</div></div>`;
+    return;
+  }
+  const done = ms.filter(m=>m.done), todo = ms.filter(m=>!m.done);
+  document.getElementById('dailyContent').innerHTML =
+    (done.length?`<div class="section-title">✅ 已完赛</div>`+done.map(renderMatchCard).join(''):'') +
+    (todo.length?(done.length?`<div class="section-title">🔮 即将开赛</div>`:'')+todo.map(renderMatchCard).join(''):'');
+}
+
+// ================================================================
+// BRACKET VIEW
+// ================================================================
+function getWinner(m) {
+  if (m.winner) return m.winner;
+  if (!m.score) return null;
+  try {
+    const s = m.score.replace(/\(点.*?\)/g,'').trim().split('-');
+    return parseInt(s[0])>parseInt(s[1]) ? m.home : parseInt(s[1])>parseInt(s[0]) ? m.away : null;
+  } catch(e) { return null; }
+}
+
+function getLoser(m) {
+  const w = getWinner(m);
+  if (!w) return null;
+  return w === m.home ? m.away : m.home;
+}
+
+function bTeamRow(team, isW, score) {
+  const f = FLAGS[team]||'🌍';
+  return `<div class="b-team"><span class="b-flag">${f}</span><span class="b-name">${team}</span>${score!==undefined?`<span class="b-score ${isW?'w':'l'}">${score}</span>`:''}</div>`;
+}
+
+function bracketMatchBox(m, idx) {
+  if (!m || m.home==='待定') return `<div class="b-match"><div class="b-tbd">待定</div></div>`;
+  const w = getWinner(m), l = getLoser(m), done = !!m.score;
+  const hW = w===m.home, aW = w===m.away;
+  const hs = m.score ? m.score.replace(/\(点.*?\)/g,'').trim().split('-')[0] : undefined;
+  const as = m.score ? m.score.replace(/\(点.*?\)/g,'').trim().split('-')[1] : undefined;
+  const cls = done ? ' won' : '';
+  const onclick = m.home!=='待定' ? ` onclick="openPrediction('${m.home}','${m.away}','${m.id||''}','${m.time||''}','${m.venue||''}','${m.score||''}')"` : '';
+  return `<div class="b-match${cls}"${onclick}>
+    ${bTeamRow(m.home, hW, hs)}${bTeamRow(m.away, aW, as)}
+    ${!done && m.time ? `<div class="b-info"><span class="b-time">🕐 ${m.date||''} ${m.time}</span></div>` : ''}
+    ${done && m.score ? `<div class="b-info">${m.score}</div>` : ''}
+  </div>`;
+}
+
+function renderBracket() {
+  const r32Winners = R32.map(m => ({ winner: getWinner(m), loser: getLoser(m), match: m, done: !!m.score }));
+
+  const R16_P = [[0,2],[1,3],[4,6],[5,7],[8,10],[9,11],[12,14],[13,15]];
+  const r16 = R16_P.map(([i,j]) => ({
+    home: r32Winners[i].winner||'待定', away: r32Winners[j].winner||'待定',
+    id: `R16-${i+1}`, from: `${R32[i].id} vs ${R32[j].id}`, date:'', time:'', venue:'', score:null
+  }));
+
+  const QF_P = [[0,1],[2,3],[4,5],[6,7]];
+  const qf = QF_P.map(([i,j]) => ({home:'待定',away:'待定',id:`QF-${i+1}`,date:'',time:'',venue:'',score:null}));
+
+  const sf = [[0,1],[2,3]].map(([i,j],k) => ({home:'待定',away:'待定',id:`SF-${k+1}`,date:'',time:'',venue:'',score:null}));
+  const final = {home:'待定',away:'待定',id:'FINAL',date:'',time:'',venue:'MetLife NY/NJ',score:null};
+  const third = {home:'待定',away:'待定',id:'3RD',date:'',time:'',venue:'Miami',score:null,isThird:true};
+
+  // 计算 slot 高度比例
+  const r32Slots = R32.length; // 16
+  const r16Slots = r16.length; // 8
+  const qfSlots  = qf.length;  // 4
+  const sfSlots  = sf.length;  // 2
+  const fSlots   = 2;          // final + 3rd
+
+  let html = '<div class="bracket">';
+
+  // R32
+  html += '<div class="round-col"><div class="round-label">32强</div>';
+  for (const m of R32) html += `<div class="slot">${bracketMatchBox(m)}</div>`;
+  html += '</div>';
+
+  // Connectors
+  html += '<div class="connectors">'+Array(8).fill('<div class="conn-group"></div>').join('')+'</div>';
+
+  // R16
+  html += '<div class="round-col" style="min-width:175px"><div class="round-label">16强 (7/4-7)</div>';
+  html += '<div style="flex:0.3"></div>';
+  for (const m of r16) html += `<div class="slot" style="flex:2">${bracketMatchBox(m)}</div>`;
+  html += '<div style="flex:0.3"></div>';
+  html += '</div>';
+
+  // Connectors
+  html += '<div class="connectors">'+Array(4).fill('<div class="conn-group"></div>').join('')+'</div>';
+
+  // QF
+  html += '<div class="round-col" style="min-width:175px"><div class="round-label">八强 (7/9-11)</div>';
+  html += '<div style="flex:0.7"></div>';
+  for (const m of qf) html += `<div class="slot" style="flex:4">${bracketMatchBox(m)}</div>`;
+  html += '<div style="flex:0.7"></div>';
+  html += '</div>';
+
+  // Connectors
+  html += '<div class="connectors">'+Array(2).fill('<div class="conn-group"></div>').join('')+'</div>';
+
+  // SF
+  html += '<div class="round-col" style="min-width:175px"><div class="round-label">半决赛 (7/14-15)</div>';
+  html += '<div style="flex:1.5"></div>';
+  for (const m of sf) html += `<div class="slot" style="flex:8">${bracketMatchBox(m)}</div>`;
+  html += '<div style="flex:1.5"></div>';
+  html += '</div>';
+
+  // Connectors
+  html += '<div class="connectors">'+Array(1).fill('<div class="conn-group"></div>').join('')+'</div>';
+
+  // Final
+  html += '<div class="round-col wide"><div class="round-label final-label">🏆 决赛 7/19</div>';
+  html += '<div style="flex:2"></div>';
+  html += `<div class="slot" style="flex:16">${bracketMatchBox(final)}</div>`;
+  html += '<div style="flex:1"></div>';
+  html += '<div style="text-align:center;color:var(--dim);font-size:0.75rem;padding:4px">🥉 三四名 7/18</div>';
+  html += `<div class="slot" style="flex:8">${bracketMatchBox(third)}</div>`;
+  html += '<div style="flex:2"></div>';
+  html += '</div>';
+
+  html += '</div>';
+  document.getElementById('bracketContent').innerHTML = html;
+}
+
+// ================================================================
+// MODAL — 点击场次查看预测
+// ================================================================
+function openPrediction(home, away, id, time, venue, score) {
+  if (home==='待定' || away==='待定') return;
+
+  const fH = FLAGS[home]||'', fA = FLAGS[away]||'';
+
+  // 已完赛
+  if (score && score !== 'null') {
+    let wHTML = '';
+    try {
+      const p = score.replace(/\(点.*?\)/g,'').trim().split('-');
+      if (parseInt(p[0]) > parseInt(p[1])) wHTML = `<div style="color:var(--green);font-size:1.1rem;margin-top:8px">🏆 ${home} 获胜</div>`;
+      else if (parseInt(p[1]) > parseInt(p[0])) wHTML = `<div style="color:var(--green);font-size:1.1rem;margin-top:8px">🏆 ${away} 获胜</div>`;
+    } catch(e) {}
+    document.getElementById('modalContent').innerHTML = `
+      <button class="close" onclick="closeModal()">✕</button>
+      <h3 style="text-align:center;color:var(--dim)">${id} · ${venue||''}</h3>
+      <div class="m-teams">
+        <div style="text-align:center"><div class="m-flag">${fH}</div><div class="m-name">${home}</div></div>
+        <div class="m-vs">VS</div>
+        <div style="text-align:center"><div class="m-flag">${fA}</div><div class="m-name">${away}</div></div>
+      </div>
+      <div class="m-meta">🕐 ${time||''} 北京时间</div>
+      <div class="result-box"><div class="score">${score}</div>${wHTML}</div>
+      <div style="text-align:center;color:var(--dim);font-size:0.8rem;margin-top:8px">✅ 已完赛</div>`;
+    document.getElementById('modal').classList.add('show');
+    return;
+  }
+
+  // 预测
+  const p = predict(home, away);
+  const ord = parseFloat(p.wp) >= parseFloat(p.lp)
+    ? [{l:`${home} 获胜`,pct:p.wp,c:'bar-green'},{l:'平局',pct:p.dp,c:'bar-yellow'},{l:`${away} 获胜`,pct:p.lp,c:'bar-red'}]
+    : [{l:`${home} 获胜`,pct:p.wp,c:'bar-red'},{l:'平局',pct:p.dp,c:'bar-yellow'},{l:`${away} 获胜`,pct:p.lp,c:'bar-green'}];
+  const chips = p.top3.map((x,i)=>`<span class="score-chip${i===0?' star':''}">${x.s} <span style="color:var(--dim);font-size:0.7rem">${x.p}%</span></span>`).join('');
+
+  document.getElementById('modalContent').innerHTML = `
+    <button class="close" onclick="closeModal()">✕</button>
+    <h3 style="text-align:center;color:var(--dim)">${id} · ${venue||''}</h3>
+    <div class="m-teams">
+      <div style="text-align:center"><div class="m-flag">${fH}</div><div class="m-name">${home}</div><div class="m-rank">FIFA #${p.rH||'?'} · Elo ${p.eH}</div></div>
+      <div class="m-vs">VS</div>
+      <div style="text-align:center"><div class="m-flag">${fA}</div><div class="m-name">${away}</div><div class="m-rank">FIFA #${p.rA||'?'} · Elo ${p.eA}</div></div>
+    </div>
+    <div class="m-meta">🕐 ${time||''} 北京时间 · Elo差 ${p.eDiff>0?'+':''}${p.eDiff}</div>
+    <div class="prob-section" style="margin-top:12px">
+      <div style="font-size:0.85rem;color:var(--dim);margin-bottom:6px">📈 胜平负概率 (90分钟)</div>
+      ${ord.map(b=>renderProbBar(b.l,b.pct,b.c)).join('')}
+    </div>
+    <div class="xg-row"><div>${home}<br><span class="xg-val">${p.xgH}</span></div><div style="align-self:center;color:var(--dim);font-size:0.8rem">xG<br>总≈${p.totalXg}</div><div>${away}<br><span class="xg-val">${p.xgA}</span></div></div>
+    <div class="top-scores"><span style="color:var(--dim);font-size:0.8rem;align-self:center">🎯 最可能比分:</span>${chips}</div>
+    <div class="verdict ${p.verdict.cls}" style="margin-top:12px">${p.verdict.text}</div>`;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
+// ================================================================
+// INIT
+// ================================================================
+const params = new URLSearchParams(window.location.search);
+const initDate = params.get('date') || bjToday();
+loadDaily(initDate);
+renderBracket();
+</script>
+</body>
+</html>

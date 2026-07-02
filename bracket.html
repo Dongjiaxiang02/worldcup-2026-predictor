@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏆 2026世界杯 对战总览图</title>
+<style>
+  :root {
+    --bg: #0b1120; --line: #1e3a5f; --text: #e2e8f0; --dim: #64748b;
+    --gold: #fbbf24; --silver: #94a3b8; --bronze: #cd7f32;
+    --green: #4ade80; --red: #f87171; --accent: #38bdf8;
+    --card-win: #0f2027; --card-bg: #111827;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh; }
+
+  .header {
+    text-align:center; padding:32px 16px 20px;
+    background:linear-gradient(180deg, rgba(56,189,248,0.08) 0%, transparent 100%);
+  }
+  .header h1 { font-size:2rem; margin-bottom:6px; }
+  .header .sub { color:var(--dim); font-size:0.9rem; }
+  .header .trophy { font-size:3rem; }
+
+  /* ── Legend ── */
+  .legend {
+    display:flex; gap:20px; justify-content:center; flex-wrap:wrap;
+    padding:12px; font-size:0.8rem; color:var(--dim);
+  }
+  .legend span { display:flex; align-items:center; gap:4px; }
+  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .dot-win { background:var(--green); }
+  .dot-pend { background:var(--accent); }
+  .dot-out { background:var(--red); }
+
+  /* ── Bracket Container ── */
+  .bracket {
+    display:flex; gap:0; padding:16px 8px 40px;
+    overflow-x:auto; min-width:fit-content;
+  }
+
+  /* ── Round Column ── */
+  .round-col {
+    display:flex; flex-direction:column; justify-content:space-around;
+    min-width:180px; flex-shrink:0;
+  }
+  .round-col.wide { min-width:220px; }
+  .round-label {
+    text-align:center; font-weight:700; font-size:0.9rem;
+    color:var(--accent); padding:8px 0; margin-bottom:4px;
+    border-bottom:1px solid var(--line); letter-spacing:2px;
+  }
+  .round-label.final-label { color:var(--gold); }
+
+  /* ── Match Slot ── */
+  .slot {
+    display:flex; flex-direction:column; justify-content:center;
+    flex:1; position:relative; padding:2px 0;
+  }
+  .match-box {
+    background:var(--card-bg); border:1px solid var(--line); border-radius:10px;
+    padding:8px 10px; margin:0 6px; transition:all 0.2s;
+    min-height:64px; display:flex; flex-direction:column; justify-content:center;
+    position:relative;
+  }
+  .match-box:hover { border-color:var(--accent); z-index:2; }
+  .match-box.won { border-color:var(--green); background:var(--card-win); }
+  .match-box.lost { opacity:0.5; }
+
+  .match-box .team-row {
+    display:flex; align-items:center; gap:6px; padding:3px 0; white-space:nowrap;
+  }
+  .match-box .flag { font-size:1rem; width:22px; text-align:center; flex-shrink:0; }
+  .match-box .name { font-size:0.85rem; flex:1; overflow:hidden; text-overflow:ellipsis; }
+  .match-box .score { font-weight:700; font-size:0.9rem; min-width:24px; text-align:center; }
+  .match-box .score.win { color:var(--green); }
+  .match-box .score.lose { color:var(--red); }
+
+  .match-box .tbd {
+    text-align:center; color:var(--dim); font-size:0.8rem; font-style:italic;
+  }
+  .match-box .match-info {
+    text-align:center; font-size:0.7rem; color:var(--dim); margin-top:2px;
+  }
+  .match-box .match-info .time { color:var(--accent); }
+
+  /* ── Connector Lines ── */
+  .connectors {
+    display:flex; flex-direction:column; justify-content:space-around;
+    width:28px; flex-shrink:0; position:relative;
+  }
+  .conn-group {
+    flex:1; display:flex; flex-direction:column; justify-content:center;
+    position:relative;
+  }
+  .conn-group::before {
+    content:''; position:absolute; right:0; top:50%;
+    width:14px; height:2px; background:var(--line);
+  }
+
+  /* ── Trophy row ── */
+  .trophy-card {
+    background:linear-gradient(135deg, #1a1a0a, #2a2000);
+    border:2px solid var(--gold); border-radius:16px;
+    padding:20px; text-align:center; margin:20px auto; max-width:400px;
+  }
+  .trophy-card .big-trophy { font-size:3rem; }
+  .trophy-card .champ-name { font-size:1.5rem; font-weight:800; color:var(--gold); }
+
+  /* ── Responsive ── */
+  @media (max-width:800px) {
+    .round-col { min-width:150px; }
+    .round-col.wide { min-width:170px; }
+    .match-box { padding:6px 8px; margin:0 3px; }
+    .match-box .name { font-size:0.75rem; }
+    .connectors { width:18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="trophy">🏆</div>
+  <h1>2026 世界杯 · 淘汰赛对战总览</h1>
+  <div class="sub">32强 → 16强 → 8强 → 4强 → 决赛 · 北京时间</div>
+</div>
+
+<div class="legend">
+  <span><span class="dot dot-win"></span> 已晋级</span>
+  <span><span class="dot dot-pend"></span> 待开赛</span>
+  <span><span class="dot dot-out"></span> 已淘汰</span>
+  <span>📊 点击已完赛场次查看比分</span>
+</div>
+
+<div id="bracket"></div>
+
+<div class="trophy-card" id="trophyCard" style="display:none">
+  <div class="big-trophy">👑</div>
+  <div class="champ-name" id="champName"></div>
+  <div style="color:var(--dim);margin-top:4px;">2026世界杯冠军</div>
+</div>
+
+<script>
+// ================================================================
+// 数据
+// ================================================================
+const FLAGS = {
+  "阿根廷":"🇦🇷","西班牙":"🇪🇸","法国":"🇫🇷","英格兰":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","葡萄牙":"🇵🇹","巴西":"🇧🇷",
+  "摩洛哥":"🇲🇦","荷兰":"🇳🇱","比利时":"🇧🇪","德国":"🇩🇪","克罗地亚":"🇭🇷","意大利":"🇮🇹",
+  "哥伦比亚":"🇨🇴","墨西哥":"🇲🇽","塞内加尔":"🇸🇳","乌拉圭":"🇺🇾","美国":"🇺🇸","日本":"🇯🇵",
+  "瑞士":"🇨🇭","奥地利":"🇦🇹","韩国":"🇰🇷","尼日利亚":"🇳🇬","澳大利亚":"🇦🇺","阿尔及利亚":"🇩🇿",
+  "埃及":"🇪🇬","加拿大":"🇨🇦","挪威":"🇳🇴","乌克兰":"🇺🇦","科特迪瓦":"🇨🇮","瑞典":"🇸🇪",
+  "巴拉圭":"🇵🇾","塞尔维亚":"🇷🇸","喀麦隆":"🇨🇲","突尼斯":"🇹🇳","民主刚果":"🇨🇩",
+  "南非":"🇿🇦","波黑":"🇧🇦","佛得角":"🇨🇻","加纳":"🇬🇭","丹麦":"🇩🇰","厄瓜多尔":"🇪🇨",
+  "伊朗":"🇮🇷","土耳其":"🇹🇷","巴拿马":"🇵🇦","智利":"🇨🇱","苏格兰":"🏴","秘鲁":"🇵🇪",
+  "新西兰":"🇳🇿","卡塔尔":"🇶🇦","波兰":"🇵🇱",
+};
+
+const FIFA_RANK = {
+  "阿根廷":1,"西班牙":2,"法国":3,"英格兰":4,"葡萄牙":5,"巴西":6,"摩洛哥":7,"荷兰":8,
+  "比利时":9,"德国":10,"克罗地亚":11,"哥伦比亚":13,"墨西哥":14,"塞内加尔":15,"乌拉圭":16,
+  "美国":17,"日本":18,"瑞士":19,"奥地利":24,"韩国":25,"澳大利亚":27,"阿尔及利亚":28,
+  "埃及":29,"加拿大":30,"挪威":31,"科特迪瓦":33,"瑞典":38,"巴拉圭":41,"塞尔维亚":43,
+  "民主刚果":46,"南非":60,"波黑":64,"佛得角":67,"加纳":73,
+};
+
+// R32 比赛数据
+const R32 = [
+  { id:"M73", date:"06-28", time:"04:00", home:"南非", away:"加拿大", score:"0-1" },
+  { id:"M74", date:"06-28", time:"08:00", home:"德国", away:"巴拉圭", score:"1-1 (点3-4)", winner:"巴拉圭" },
+  { id:"M75", date:"06-29", time:"04:00", home:"荷兰", away:"摩洛哥", score:"1-1 (点2-3)", winner:"摩洛哥" },
+  { id:"M76", date:"06-29", time:"07:00", home:"巴西", away:"日本", score:"2-1" },
+  { id:"M77", date:"06-29", time:"11:00", home:"科特迪瓦", away:"挪威", score:"1-2" },
+  { id:"M78", date:"06-30", time:"04:00", home:"法国", away:"瑞典", score:"3-0" },
+  { id:"M79", date:"06-30", time:"07:00", home:"墨西哥", away:"厄瓜多尔", score:"2-0" },
+  { id:"M80", date:"06-30", time:"11:00", home:"英格兰", away:"民主刚果", score:"2-1" },
+  { id:"M81", date:"07-01", time:"07:00", home:"美国", away:"波黑", score:"2-0" },
+  { id:"M82", date:"07-01", time:"11:00", home:"比利时", away:"塞内加尔", score:"3-2" },
+  // 7月3日 北京
+  { id:"M83", date:"07-03", time:"03:00", home:"西班牙", away:"奥地利" },
+  { id:"M84", date:"07-03", time:"07:00", home:"葡萄牙", away:"克罗地亚" },
+  { id:"M85", date:"07-03", time:"11:00", home:"瑞士", away:"阿尔及利亚" },
+  // 7月4日 北京
+  { id:"M86", date:"07-04", time:"06:00", home:"澳大利亚", away:"埃及" },
+  { id:"M87", date:"07-04", time:"10:00", home:"阿根廷", away:"佛得角" },
+  { id:"M88", date:"07-04", time:"13:30", home:"哥伦比亚", away:"加纳" },
+];
+
+// R32 → R16 对阵映射 (按官方 bracket: 相邻组交叉)
+// M73-M88 按照比赛顺序: [0]=M73, [1]=M74, ..., [15]=M88
+// R16配对: (0,2),(1,3),(4,6),(5,7),(8,10),(9,11),(12,14),(13,15)
+const R16_PAIRS = [[0,2],[1,3],[4,6],[5,7],[8,10],[9,11],[12,14],[13,15]];
+const QF_PAIRS  = [[0,1],[2,3],[4,5],[6,7]];
+const SF_PAIRS  = [[0,1],[2,3]];
+
+// ================================================================
+// 工具函数
+// ================================================================
+function getWinner(m) {
+  if (m.winner) return m.winner;
+  if (!m.score) return null;
+  try {
+    const s = m.score.replace(/\(点.*?\)/g,'').trim().split('-');
+    const h = parseInt(s[0]), a = parseInt(s[1]);
+    return h > a ? m.home : a > h ? m.away : m.winner; // 点球winner已设
+  } catch(e) { return null; }
+}
+
+function getLoser(m) {
+  if (m.winner) return m.winner === m.home ? m.away : m.home;
+  if (!m.score) return null;
+  try {
+    const s = m.score.replace(/\(点.*?\)/g,'').trim().split('-');
+    const h = parseInt(s[0]), a = parseInt(s[1]);
+    return h > a ? m.away : a > h ? m.home : (m.winner ? (m.winner === m.home ? m.away : m.home) : null);
+  } catch(e) { return null; }
+}
+
+// ================================================================
+// 渲染
+// ================================================================
+function renderTeamRow(team, isWinner, isLoser, score, isHome) {
+  const flag = FLAGS[team] || '🌍';
+  const cls = isWinner ? 'win' : isLoser ? 'lose' : '';
+  return `
+    <div class="team-row">
+      <span class="flag">${flag}</span>
+      <span class="name">${team}</span>
+      ${score !== undefined ? `<span class="score ${cls}">${score}</span>` : ''}
+    </div>`;
+}
+
+function renderMatchBox(m, size) {
+  if (!m || m.home === '待定') {
+    return `<div class="match-box"><div class="tbd">待定</div></div>`;
+  }
+
+  const winner = getWinner(m);
+  const loser = getLoser(m);
+  const hasScore = !!m.score;
+  const isCompleted = hasScore && !!winner;
+  const cls = isCompleted ? (winner === m.home ? '' : '') : '';
+
+  let html = '<div class="match-box';
+  if (isCompleted) html += ' won';
+  html += '">';
+
+  // Home team
+  const hWin = winner === m.home;
+  const hLose = loser === m.home;
+  const hScore = m.score ? m.score.replace(/\(点.*?\)/g,'').trim().split('-')[0] : undefined;
+  html += renderTeamRow(m.home, hWin, hLose, hScore, true);
+
+  // Away team
+  const aWin = winner === m.away;
+  const aLose = loser === m.away;
+  const aScore = m.score ? m.score.replace(/\(点.*?\)/g,'').trim().split('-')[1] : undefined;
+  html += renderTeamRow(m.away, aWin, aLose, aScore, false);
+
+  // Match info
+  if (!hasScore && m.time) {
+    html += `<div class="match-info"><span class="time">🕐 ${m.date} ${m.time}</span></div>`;
+  } else if (hasScore) {
+    html += `<div class="match-info">${m.score}</div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderConnectors(count) {
+  let html = '<div class="connectors">';
+  for (let i = 0; i < count; i++) {
+    html += '<div class="conn-group"></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildBracket() {
+  // ---- 计算各轮次队伍 ----
+  // R32 winners → R16
+  const r32Results = R32.map(m => ({
+    winner: getWinner(m), loser: getLoser(m), match: m, done: !!m.score
+  }));
+
+  // R16
+  const r16 = R16_PAIRS.map(([i, j]) => ({
+    home: r32Results[i].winner || '待定',
+    away: r32Results[j].winner || '待定',
+    from: `${R32[i].id} 胜者 vs ${R32[j].id} 胜者`,
+    done: false,
+  }));
+
+  // QF
+  const qf = QF_PAIRS.map(([i, j]) => ({
+    home: '待定', away: '待定',
+    from: `R16-${i+1} 胜者 vs R16-${j+1} 胜者`,
+    done: false,
+  }));
+
+  // SF
+  const sf = SF_PAIRS.map(([i, j]) => ({
+    home: '待定', away: '待定',
+    from: `QF-${i+1} 胜者 vs QF-${j+1} 胜者`,
+    done: false,
+  }));
+
+  // Final
+  const final = { home: '待定', away: '待定', from: 'SF-1 胜者 vs SF-2 胜者' };
+  const third = { home: '待定', away: '待定', from: 'SF 败者', isThird: true };
+
+  // ---- 生成 HTML ----
+  let html = '<div class="bracket">';
+
+  // Round of 32
+  html += '<div class="round-col">';
+  html += '<div class="round-label">32强</div>';
+  for (const m of R32) {
+    html += `<div class="slot">${renderMatchBox(m)}</div>`;
+  }
+  html += '</div>';
+
+  // Connectors + Round of 16
+  html += renderConnectors(8);
+  html += '<div class="round-col">';
+  html += '<div class="round-label">16强</div>';
+  html += '<div style="padding-top:24px"></div>';
+  for (const m of r16) {
+    html += `<div class="slot" style="flex:2">${renderMatchBox(m)}</div>`;
+  }
+  html += '</div>';
+
+  // Connectors + QF
+  html += renderConnectors(4);
+  html += '<div class="round-col">';
+  html += '<div class="round-label">八强</div>';
+  html += '<div style="padding-top:48px"></div>';
+  for (const m of qf) {
+    html += `<div class="slot" style="flex:4">${renderMatchBox(m)}</div>`;
+  }
+  html += '</div>';
+
+  // Connectors + SF
+  html += renderConnectors(2);
+  html += '<div class="round-col">';
+  html += '<div class="round-label">半决赛</div>';
+  html += '<div style="padding-top:96px"></div>';
+  for (const m of sf) {
+    html += `<div class="slot" style="flex:8">${renderMatchBox(m)}</div>`;
+  }
+  html += '</div>';
+
+  // Connectors + Final
+  html += renderConnectors(1);
+  html += '<div class="round-col wide">';
+  html += '<div class="round-label final-label">🏆 决赛</div>';
+  html += '<div style="padding-top:144px"></div>';
+  html += `<div class="slot" style="flex:16">${renderMatchBox(final)}</div>`;
+  html += '<div style="padding-top:32px"></div>';
+  html += '<div style="text-align:center;color:var(--dim);font-size:0.8rem;padding:8px">🥉 三四名</div>';
+  html += `<div class="slot" style="flex:8">${renderMatchBox(third)}</div>`;
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+// ================================================================
+// 初始化
+// ================================================================
+document.getElementById('bracket').innerHTML = buildBracket();
+
+// 冠军展示
+const lastMatch = R32[R32.length - 1];
+// 暂时隐藏冠军卡，等决赛后展示
+document.getElementById('trophyCard').style.display = 'none';
+</script>
+
+</body>
+</html>
