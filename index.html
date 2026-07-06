@@ -180,7 +180,7 @@
 
 <div class="header">
   <h1>⚽ 2026世界杯</h1>
-  <div class="sub">北京时间 (UTC+8) · FIFA排名 + Elo评分 + 泊松分布</div>
+  <div class="sub">北京时间 (UTC+8) · FIFA排名 + Elo评分 + 泊松分布 · 32强全完赛 · 16强进行中</div>
   <div class="tabs">
     <button class="active" onclick="switchTab('daily')">📅 每日赛程</button>
     <button onclick="switchTab('bracket')">🏆 对战总览</button>
@@ -254,25 +254,25 @@ const R32 = [
   { id:"M80", date:"07-01", time:"08:00", home:"英格兰", away:"民主刚果", score:"2-1", venue:"Atlanta" },
   { id:"M81", date:"07-02", time:"04:00", home:"美国", away:"波黑", score:"2-0", venue:"San Francisco" },
   { id:"M82", date:"07-02", time:"08:00", home:"比利时", away:"塞内加尔", score:"3-2", venue:"Seattle" },
-  { id:"M83", date:"07-03", time:"03:00", home:"西班牙", away:"奥地利", venue:"Los Angeles (SoFi)" },
-  { id:"M84", date:"07-03", time:"07:00", home:"葡萄牙", away:"克罗地亚", venue:"Toronto" },
-  { id:"M85", date:"07-03", time:"11:00", home:"瑞士", away:"阿尔及利亚", venue:"Vancouver" },
-  { id:"M86", date:"07-04", time:"06:00", home:"澳大利亚", away:"埃及", venue:"Dallas" },
-  { id:"M87", date:"07-04", time:"10:00", home:"阿根廷", away:"佛得角", venue:"Miami" },
-  { id:"M88", date:"07-04", time:"13:30", home:"哥伦比亚", away:"加纳", venue:"Kansas City" },
+  { id:"M83", date:"07-03", time:"03:00", home:"西班牙", away:"奥地利", score:"3-0", venue:"Los Angeles (SoFi)", winner:"西班牙" },
+  { id:"M84", date:"07-03", time:"07:00", home:"葡萄牙", away:"克罗地亚", score:"2-1", venue:"Toronto", winner:"葡萄牙" },
+  { id:"M85", date:"07-03", time:"11:00", home:"瑞士", away:"阿尔及利亚", score:"2-0", venue:"Vancouver", winner:"瑞士" },
+  { id:"M86", date:"07-04", time:"06:00", home:"澳大利亚", away:"埃及", score:"1-1 (点2-4)", venue:"Dallas", winner:"埃及" },
+  { id:"M87", date:"07-04", time:"10:00", home:"阿根廷", away:"佛得角", score:"3-2", venue:"Miami", winner:"阿根廷" },
+  { id:"M88", date:"07-04", time:"13:30", home:"哥伦比亚", away:"加纳", score:"1-0", venue:"Kansas City", winner:"哥伦比亚" },
 ];
 
-// 淘汰赛赛程 (北京时间, 基于FIFA官方赛程)
+// 淘汰赛赛程 & 结果 (北京时间)
 const KNOCKOUT = {
   r16: [
-    { id:"M89", date:"07-05", time:"01:00", venue:"Los Angeles" },
-    { id:"M90", date:"07-05", time:"05:00", venue:"Vancouver" },
-    { id:"M91", date:"07-06", time:"01:00", venue:"Houston" },
-    { id:"M92", date:"07-06", time:"05:00", venue:"Dallas" },
-    { id:"M93", date:"07-07", time:"01:00", venue:"Atlanta" },
-    { id:"M94", date:"07-07", time:"05:00", venue:"Seattle" },
-    { id:"M95", date:"07-08", time:"07:00", venue:"Mexico City" },
-    { id:"M96", date:"07-08", time:"11:00", venue:"Miami" },
+    { id:"M89", date:"07-05", time:"01:00", venue:"NRG Stadium, Houston", score:null, winner:null },
+    { id:"M90", date:"07-05", time:"05:00", venue:"Lincoln Financial Field, Philadelphia", score:null, winner:null },
+    { id:"M91", date:"07-06", time:"01:00", venue:"MetLife Stadium, NJ", score:null, winner:null },
+    { id:"M92", date:"07-06", time:"05:00", venue:"Estadio Azteca, Mexico City", score:null, winner:null },
+    { id:"M93", date:"07-07", time:"01:00", venue:"AT&T Stadium, Dallas", score:null, winner:null },
+    { id:"M94", date:"07-07", time:"05:00", venue:"Lumen Field, Seattle", score:null, winner:null },
+    { id:"M95", date:"07-08", time:"07:00", venue:"Mercedes-Benz Stadium, Atlanta", score:null, winner:null },
+    { id:"M96", date:"07-08", time:"11:00", venue:"BC Place, Vancouver", score:null, winner:null },
   ],
   qf: [
     { id:"M97", date:"07-10", time:"08:00", venue:"Boston" },
@@ -286,6 +286,13 @@ const KNOCKOUT = {
   ],
   final: { id:"M103", date:"07-19", time:"08:00", venue:"MetLife Stadium, NY/NJ" },
   third: { id:"M104", date:"07-18", time:"08:00", venue:"Miami" },
+};
+
+// R16 比赛结果 (已完赛的)
+const R16_RESULTS = {
+  0: { score:"0-3", winner:"摩洛哥" },
+  1: { score:"0-1", winner:"法国" },
+  2: { score:"1-2", winner:"挪威" },
 };
 
 // ================================================================
@@ -495,22 +502,25 @@ function renderBracket() {
   const r32Res = R32.map(m => ({ winner: getWinner(m), loser: getLoser(m), match: m, done: !!m.score }));
 
   // ── Step 2: Build R16 (dynamic from R32 winners) ──
-  const R16_P = [[0,2],[1,3],[4,6],[5,7],[8,10],[9,11],[12,14],[13,15]];
+  // 实际对阵: M73-M75, M74-M78, M76-M77, M79-M80, M83-M84, M81-M82, M87-M86, M85-M88
+  const R16_P = [[0,2],[1,5],[3,4],[6,7],[10,11],[8,9],[14,13],[12,15]];
   const r16 = R16_P.map(([i,j], idx) => {
     const sched = KNOCKOUT.r16[idx];
+    const result = R16_RESULTS[idx] || {};
     return {
       home: r32Res[i].winner || '待定', away: r32Res[j].winner || '待定',
       id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
-      score: null,
+      score: result.score || null, winner: result.winner || null,
     };
   });
 
-  // ── Step 3: Build QF (all TBD, will populate as R16 completes) ──
+  // ── Step 3: Build QF (dynamic from R16 winners) ──
   const QF_P = [[0,1],[2,3],[4,5],[6,7]];
+  const r16Winners = r16.map(m => getWinner(m));
   const qf = QF_P.map(([i,j], idx) => {
     const sched = KNOCKOUT.qf[idx];
     return {
-      home: '待定', away: '待定',
+      home: r16Winners[i] || '待定', away: r16Winners[j] || '待定',
       id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
       score: null,
     };
@@ -544,7 +554,7 @@ function renderBracket() {
   html += renderConnectorCol(8);
 
   // R16 — 8 slots, flex=2 each (occupies same total height as 16 R32 slots)
-  html += '<div class="round-col"><div class="round-label">16强</div>';
+  html += '<div class="round-col"><div class="round-label">16强 (7/4-8)</div>';
   html += '<div style="flex:0.5"></div>';
   for (let i = 0; i < r16.length; i++) {
     html += `<div class="slot" style="flex:2">${bracketMatchBox(r16[i], i)}</div>`;
@@ -556,7 +566,7 @@ function renderBracket() {
   html += renderConnectorCol(4);
 
   // QF — 4 slots, flex=4 each
-  html += '<div class="round-col"><div class="round-label">¼决赛</div>';
+  html += '<div class="round-col"><div class="round-label">¼决赛 (7/10-11)</div>';
   html += '<div style="flex:1"></div>';
   for (let i = 0; i < qf.length; i++) {
     html += `<div class="slot" style="flex:4">${bracketMatchBox(qf[i], i)}</div>`;
@@ -715,17 +725,41 @@ function renderStats() {
 
   // ── R16 预览 ──
   const r16Ready = [];
-  const R16_P = [[0,2],[1,3],[4,6],[5,7],[8,10],[9,11],[12,14],[13,15]];
-  R16_P.forEach(([i,j], idx) => {
+  const r16Done = [];
+  const R16_P2 = [[0,2],[1,5],[3,4],[6,7],[10,11],[8,9],[14,13],[12,15]];
+  R16_P2.forEach(([i,j], idx) => {
     const h = getWinner(R32[i]), a = getWinner(R32[j]);
-    if (h && a) r16Ready.push({home:h, away:a, idx, sched:KNOCKOUT.r16[idx]});
+    const result = R16_RESULTS[idx];
+    if (h && a) {
+      if (result && result.winner) {
+        r16Done.push({home:h, away:a, idx, sched:KNOCKOUT.r16[idx], result});
+      } else {
+        r16Ready.push({home:h, away:a, idx, sched:KNOCKOUT.r16[idx]});
+      }
+    }
   });
+  // ── R16 战报 ──
+  if (r16Done.length > 0) {
+    html += '<div class="section-title" style="margin-top:20px">✅ 16强已完赛</div>';
+    html += '<div class="insight-list">';
+    for (const r of r16Done) {
+      const winnerFlag = FLAGS[r.result.winner] || '🏆';
+      html += `<div class="insight-item upset" style="border-left-color:var(--green)">
+        <div class="ins-icon">🏟️</div>
+        <div class="ins-body">
+          <div class="ins-title">${winnerFlag} ${r.result.winner} 晋级！ ${FLAGS[r.home]||''} ${r.home} ${r.result.score} ${FLAGS[r.away]||''} ${r.away}</div>
+          <div class="ins-desc">${r.sched.id} · ${r.sched.date} · ${r.sched.venue}</div>
+        </div></div>`;
+    }
+    html += '</div>';
+  }
+
   if (r16Ready.length > 0) {
-    html += '<div class="section-title" style="margin-top:20px">🔗 已确定的16强对阵</div>';
+    html += '<div class="section-title" style="margin-top:20px">🔮 16强即将开赛</div>';
     html += '<div class="insight-list">';
     for (const r of r16Ready) {
       const p = predict(r.home, r.away);
-      html += `<div class="insight-item neutral">
+      html += `<div class="insight-item highlight-ins">
         <div class="ins-icon">⚔️</div>
         <div class="ins-body">
           <div class="ins-title">${FLAGS[r.home]||''} ${r.home} vs ${FLAGS[r.away]||''} ${r.away}</div>
