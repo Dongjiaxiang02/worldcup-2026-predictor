@@ -364,10 +364,76 @@ function formatDate(s) {
 }
 
 function getMatches(dateStr) {
-  return R32.filter(m => {
-    const dd = m.date.startsWith('06') ? `2026-${m.date}` : `2026-${m.date}`;
-    return dd === dateStr;
-  }).map(m => ({...m, dateFull: dateStr, done:!!m.score}));
+  // 收集所有比赛: R32 + 淘汰赛
+  const all = [];
+
+  // R32
+  for (const m of R32) {
+    const dd = `2026-${m.date}`;
+    all.push({...m, dateFull: dd, done:!!m.score, round:'R32'});
+  }
+
+  // 淘汰赛 (动态计算对阵)
+  const r32Res = R32.map(m => ({ winner: getWinner(m), loser: getLoser(m) }));
+  const R16_P = [[0,2],[1,5],[3,4],[6,7],[10,11],[8,9],[14,13],[12,15]];
+  const r16 = R16_P.map(([i,j], idx) => {
+    const sched = KNOCKOUT.r16[idx];
+    const result = R16_RESULTS[idx] || {};
+    return {
+      id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
+      home: r32Res[i].winner || '待定', away: r32Res[j].winner || '待定',
+      score: result.score || null, winner: result.winner || null,
+      round: 'R16',
+    };
+  });
+
+  const r16Winners = r16.map(m => getWinner(m));
+  const QF_P = [[0,1],[2,3],[4,5],[6,7]];
+  const qf = QF_P.map(([i,j], idx) => {
+    const sched = KNOCKOUT.qf[idx];
+    return {
+      id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
+      home: r16Winners[i] || '待定', away: r16Winners[j] || '待定',
+      score: null, winner: null, round: 'QF',
+    };
+  });
+
+  // 添加到 all
+  for (const m of [...r16, ...qf]) {
+    if (m.date) {
+      const dd = `2026-${m.date}`;
+      all.push({...m, dateFull: dd, done:!!m.score});
+    }
+  }
+
+  // 半决赛 & 决赛 (暂无具体对阵，只展示赛程卡片)
+  for (const s of KNOCKOUT.sf) {
+    if (s.date) {
+      all.push({
+        id: s.id, date: s.date, time: s.time, venue: s.venue,
+        home:'待定', away:'待定', score:null, winner:null,
+        dateFull: `2026-${s.date}`, done:false, round:'SF',
+      });
+    }
+  }
+  if (KNOCKOUT.final.date) {
+    all.push({
+      id: KNOCKOUT.final.id, date: KNOCKOUT.final.date, time: KNOCKOUT.final.time,
+      venue: KNOCKOUT.final.venue,
+      home:'待定', away:'待定', score:null, winner:null,
+      dateFull: `2026-${KNOCKOUT.final.date}`, done:false, round:'FINAL',
+    });
+  }
+  if (KNOCKOUT.third.date) {
+    all.push({
+      id: KNOCKOUT.third.id, date: KNOCKOUT.third.date, time: KNOCKOUT.third.time,
+      venue: KNOCKOUT.third.venue,
+      home:'待定', away:'待定', score:null, winner:null,
+      dateFull: `2026-${KNOCKOUT.third.date}`, done:false, round:'3RD',
+    });
+  }
+
+  return all.filter(m => m.dateFull === dateStr);
 }
 
 function renderProbBar(label, pct, cls) {
@@ -376,6 +442,8 @@ function renderProbBar(label, pct, cls) {
 
 function renderMatchCard(m) {
   const fH = FLAGS[m.home]||'', fA = FLAGS[m.away]||'';
+  const roundLabel = {R32:'32强', R16:'16强', QF:'¼决赛', SF:'半决赛', FINAL:'🏆 决赛', '3RD':'🥉 三四名'}[m.round] || '';
+
   if (m.done) {
     let wHTML = '';
     try {
@@ -385,18 +453,32 @@ function renderMatchCard(m) {
       else if (m.winner) wHTML = `<div class="winner">🏆 ${m.winner} 获胜 (点球)</div>`;
     } catch(e) {}
     return `<div class="match-card">
-      <div class="top-row"><span class="badge badge-done">✅ 已完赛</span><span style="color:var(--dim);font-size:0.82rem">${m.id} · ${m.venue}</span></div>
+      <div class="top-row"><span class="badge badge-done">✅ 已完赛</span><span style="color:var(--dim);font-size:0.82rem">${m.id} · ${roundLabel} · ${m.venue}</span></div>
       <div class="match-teams"><div class="team"><div class="flag">${fH}</div><div class="name">${m.home}</div></div><div class="vs">VS</div><div class="team"><div class="flag">${fA}</div><div class="name">${m.away}</div></div></div>
       <div class="match-meta">🕐 ${m.time} 北京时间</div>
       <div class="result-box"><div class="score">${m.score}</div>${wHTML}</div></div>`;
   }
+
+  // 待定比赛 (对阵未确定)
+  if (m.home==='待定' || m.away==='待定') {
+    return `<div class="match-card">
+      <div class="top-row"><span class="badge badge-upcoming">🔮 待定</span><span style="color:var(--dim);font-size:0.82rem">${m.id} · ${roundLabel} · ${m.venue||''}</span></div>
+      <div class="match-teams">
+        <div class="team"><div class="flag">${fH||'🌍'}</div><div class="name">${m.home}</div></div>
+        <div class="vs">VS</div>
+        <div class="team"><div class="flag">${fA||'🌍'}</div><div class="name">${m.away}</div></div>
+      </div>
+      <div class="match-meta">🕐 ${m.time} 北京时间 · 对阵待R16结果确定</div>
+      <div style="text-align:center;color:var(--dim);font-size:0.85rem;padding:12px">⏳ 等待上一轮比赛结果</div></div>`;
+  }
+
   const p = predict(m.home, m.away);
   const ord = parseFloat(p.wp) >= parseFloat(p.lp)
     ? [{l:`${m.home} 获胜`,pct:p.wp,c:'bar-green'},{l:'平局',pct:p.dp,c:'bar-yellow'},{l:`${m.away} 获胜`,pct:p.lp,c:'bar-red'}]
     : [{l:`${m.home} 获胜`,pct:p.wp,c:'bar-red'},{l:'平局',pct:p.dp,c:'bar-yellow'},{l:`${m.away} 获胜`,pct:p.lp,c:'bar-green'}];
   const chips = p.top3.map((x,i)=>`<span class="score-chip${i===0?' star':''}">${x.s} <span style="color:var(--dim);font-size:0.7rem">${x.p}%</span></span>`).join('');
   return `<div class="match-card">
-    <div class="top-row"><span class="badge badge-upcoming">🔮 即将开赛</span><span style="color:var(--dim);font-size:0.82rem">${m.id} · ${m.venue}</span></div>
+    <div class="top-row"><span class="badge badge-upcoming">🔮 即将开赛</span><span style="color:var(--dim);font-size:0.82rem">${m.id} · ${roundLabel} · ${m.venue}</span></div>
     <div class="match-teams">
       <div class="team"><div class="flag">${fH}</div><div class="name">${m.home}</div><div class="rank">FIFA #${p.rH||'?'} · Elo ${p.eH}</div></div>
       <div class="vs">VS</div>
@@ -412,19 +494,38 @@ function renderMatchCard(m) {
 function renderDateNav(cur) {
   const dt = new Date(cur+'T00:00:00+08:00');
   const today = bjToday();
-  let html = '';
-  for (let i=-2; i<=4; i++) {
-    const d = new Date(dt.getTime()+i*86400000);
+
+  // 收集所有有比赛的日期
+  const matchDates = new Set();
+  const allMatchData = getMatches('2026-06-28'); // dummy call won't work, build manually
+  // 扫描 R32
+  R32.forEach(m => matchDates.add(`2026-${m.date}`));
+  // 扫描淘汰赛
+  KNOCKOUT.r16.forEach(m => { if(m.date) matchDates.add(`2026-${m.date}`); });
+  KNOCKOUT.qf.forEach(m => { if(m.date) matchDates.add(`2026-${m.date}`); });
+  KNOCKOUT.sf.forEach(m => { if(m.date) matchDates.add(`2026-${m.date}`); });
+  if(KNOCKOUT.final.date) matchDates.add(`2026-${KNOCKOUT.final.date}`);
+  if(KNOCKOUT.third.date) matchDates.add(`2026-${KNOCKOUT.third.date}`);
+
+  // 从06-28到07-19展示所有日期
+  const allDates = [];
+  const start = new Date('2026-06-28T00:00:00+08:00');
+  const end = new Date('2026-07-20T00:00:00+08:00');
+  for (let d = new Date(start); d < end; d.setDate(d.getDate()+1)) {
     const pad=n=>String(n).padStart(2,'0');
     const s = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    allDates.push(s);
+  }
+
+  let html = '';
+  for (const s of allDates) {
     const fd = formatDate(s);
-    const count = R32.filter(m => {
-      const dd = `2026-${m.date}`;
-      return dd === s;
-    }).length;
-    const liveDot = s===today ? ' 🔴' : '';
-    const countBadge = count > 0 ? ` <span style="font-size:0.7rem;opacity:0.7">(${count}场)</span>` : '';
-    html += `<button class="${s===cur?'active':''}" onclick="loadDaily('${s}')">${fd.m}/${fd.d} ${fd.wd}${liveDot}${countBadge}</button>`;
+    const hasMatch = matchDates.has(s);
+    const isToday = s === today;
+    const isPast = s < today;
+    if (!hasMatch) continue; // 只显示有比赛的日期
+    const liveDot = isToday ? ' 🔴' : '';
+    html += `<button class="${s===cur?'active':''}" onclick="loadDaily('${s}')">${fd.m}/${fd.d} ${fd.wd}${liveDot}</button>`;
   }
   return html;
 }
@@ -437,9 +538,14 @@ function loadDaily(dateStr) {
     return;
   }
   const done = ms.filter(m=>m.done), todo = ms.filter(m=>!m.done);
+
+  // 获取轮次标签
+  const rounds = [...new Set(ms.map(m=>m.round))];
+  const roundTag = rounds.map(r => ({R32:'32强',R16:'16强',QF:'¼决赛',SF:'半决赛',FINAL:'决赛','3RD':'三四名'}[r]||r)).join('/');
+
   document.getElementById('dailyContent').innerHTML =
-    (done.length?`<div class="section-title">✅ 已完赛</div>`+done.map(renderMatchCard).join(''):'') +
-    (todo.length?(done.length?`<div class="section-title">🔮 即将开赛</div>`:'')+todo.map(renderMatchCard).join(''):'');
+    (done.length?`<div class="section-title">✅ 已完赛 · ${roundTag}</div>`+done.map(renderMatchCard).join(''):'') +
+    (todo.length?`<div class="section-title">🔮 即将开赛 · ${roundTag}</div>`+todo.map(renderMatchCard).join(''):'');
 }
 
 // ================================================================
