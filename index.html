@@ -923,6 +923,7 @@ function renderStats() {
 
   // ── ¼决赛 ──
   const qfDone = [], qfUpcoming = [];
+  const QF_P3 = [[0,1],[2,3],[4,5],[6,7]];
   QF_P3.forEach(([i,j], qfIdx) => {
     if (r16W[i] && r16W[j]) {
       const res = QF_RESULTS[qfIdx];
@@ -971,8 +972,8 @@ function renderStats() {
     const res = QF_RESULTS[idx];
     qfW[idx] = (res && res.winner) ? res.winner : null;
   }
-  const SF_P = [[0,1],[2,3]];
-  SF_P.forEach(([i,j], sfIdx) => {
+  const SF_P2 = [[0,1],[2,3]];
+  SF_P2.forEach(([i,j], sfIdx) => {
     if (qfW[i] && qfW[j]) {
       sfConfirmed.push({home: qfW[i], away: qfW[j], sched: KNOCKOUT.sf[sfIdx]});
     }
