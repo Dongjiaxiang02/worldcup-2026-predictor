@@ -432,16 +432,7 @@ function getMatches(dateStr) {
     }
   }
 
-  // 半决赛 & 决赛 (暂无具体对阵，只展示赛程卡片)
-  for (const s of KNOCKOUT.sf) {
-    if (s.date) {
-      all.push({
-        id: s.id, date: s.date, time: s.time, venue: s.venue,
-        home:'待定', away:'待定', score:null, winner:null,
-        dateFull: `2026-${s.date}`, done:false, round:'SF',
-      });
-    }
-  }
+  // 决赛 & 三四名 (对阵待SF结果)
   if (KNOCKOUT.final.date) {
     all.push({
       id: KNOCKOUT.final.id, date: KNOCKOUT.final.date, time: KNOCKOUT.final.time,
