@@ -180,7 +180,7 @@
 
 <div class="header">
   <h1>⚽ 2026世界杯</h1>
-  <div class="sub">北京时间 (UTC+8) · FIFA排名 + Elo评分 + 泊松分布 · 32强✓ · 16强✓ · ¼决赛✓ · 半决赛7/14-15</div>
+  <div class="sub">北京时间 (UTC+8) · FIFA排名 + Elo评分 + 泊松分布 · 半决赛✓ · 🏆决赛7/19 西班牙vs阿根廷</div>
   <div class="tabs">
     <button class="active" onclick="switchTab('daily')">📅 每日赛程</button>
     <button onclick="switchTab('bracket')">🏆 对战总览</button>
@@ -212,7 +212,7 @@
   ⚠️ 预测仅供参考 | 📊 数据: FIFA 2026/06排名 + Elo评分 + 泊松分布 | 点击对战总览中任意场次查看预测
 </div>
 
-<!-- ── 预测弹窗 ── 2026-07-11-v2 -->
+<!-- ── 预测弹窗 ── 2026-07-16 -->
 <div class="modal-overlay" id="modal">
   <div class="modal" id="modalContent"></div>
 </div>
@@ -306,6 +306,12 @@ const QF_RESULTS = {
   1: { score:"2-1", winner:"西班牙" },
   2: { score:"2-1 (加时)", winner:"英格兰" },
   3: { score:"3-1 (加时)", winner:"阿根廷" },
+};
+
+// SF 比赛结果 (全部完赛)
+const SF_RESULTS = {
+  0: { score:"0-2", winner:"西班牙" },
+  1: { score:"1-2", winner:"阿根廷" },
 };
 
 // ================================================================
@@ -413,41 +419,40 @@ function getMatches(dateStr) {
     };
   });
 
-  // SF 动态计算
-  const qfWinners = qf.map(m => getWinner(m));
+  // SF 动态计算 (含赛果)
+  const qfWinners2 = qf.map(m => getWinner(m));
   const sfMatches = [[0,1],[2,3]].map(([i,j], idx) => {
     const sched = KNOCKOUT.sf[idx];
+    const result = SF_RESULTS[idx] || {};
     return {
       id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
-      home: qfWinners[i] || '待定', away: qfWinners[j] || '待定',
-      score: null, winner: null, round: 'SF',
+      home: qfWinners2[i] || '待定', away: qfWinners2[j] || '待定',
+      score: result.score || null, winner: result.winner || null, round: 'SF',
     };
   });
 
+  // Final & 3rd place 动态计算
+  const sfWinners2 = sfMatches.map(m => getWinner(m));
+  const sfLosers = sfMatches.map(m => getLoser(m));
+  const finalMatch = {
+    id: KNOCKOUT.final.id, date: KNOCKOUT.final.date, time: KNOCKOUT.final.time,
+    venue: KNOCKOUT.final.venue,
+    home: sfWinners2[0] || '待定', away: sfWinners2[1] || '待定',
+    score: null, winner: null, round: 'FINAL',
+  };
+  const thirdMatch = {
+    id: KNOCKOUT.third.id, date: KNOCKOUT.third.date, time: KNOCKOUT.third.time,
+    venue: KNOCKOUT.third.venue,
+    home: sfLosers[0] || '待定', away: sfLosers[1] || '待定',
+    score: null, winner: null, round: '3RD',
+  };
+
   // 添加到 all
-  for (const m of [...r16, ...qf, ...sfMatches]) {
+  for (const m of [...r16, ...qf, ...sfMatches, finalMatch, thirdMatch]) {
     if (m.date) {
       const dd = `2026-${m.date}`;
       all.push({...m, dateFull: dd, done:!!m.score});
     }
-  }
-
-  // 决赛 & 三四名 (对阵待SF结果)
-  if (KNOCKOUT.final.date) {
-    all.push({
-      id: KNOCKOUT.final.id, date: KNOCKOUT.final.date, time: KNOCKOUT.final.time,
-      venue: KNOCKOUT.final.venue,
-      home:'待定', away:'待定', score:null, winner:null,
-      dateFull: `2026-${KNOCKOUT.final.date}`, done:false, round:'FINAL',
-    });
-  }
-  if (KNOCKOUT.third.date) {
-    all.push({
-      id: KNOCKOUT.third.id, date: KNOCKOUT.third.date, time: KNOCKOUT.third.time,
-      venue: KNOCKOUT.third.venue,
-      home:'待定', away:'待定', score:null, winner:null,
-      dateFull: `2026-${KNOCKOUT.third.date}`, done:false, round:'3RD',
-    });
   }
 
   return all.filter(m => m.dateFull === dateStr);
@@ -654,16 +659,27 @@ function renderBracket() {
   const qfWinners = qf.map(m => getWinner(m));
   const sf = [[0,1],[2,3]].map(([i,j], idx) => {
     const sched = KNOCKOUT.sf[idx];
+    const result = SF_RESULTS[idx] || {};
     return {
       home: qfWinners[i] || '待定', away: qfWinners[j] || '待定',
       id: sched.id, date: sched.date, time: sched.time, venue: sched.venue,
-      score: null,
+      score: result.score || null, winner: result.winner || null,
     };
   });
 
   // ── Step 5: Final & 3rd place (dynamic from SF winners) ──
-  const final = { home:'待定', away:'待定', id:KNOCKOUT.final.id, date:KNOCKOUT.final.date, time:KNOCKOUT.final.time, venue:KNOCKOUT.final.venue, score:null };
-  const third = { home:'待定', away:'待定', id:KNOCKOUT.third.id, date:KNOCKOUT.third.date, time:KNOCKOUT.third.time, venue:KNOCKOUT.third.venue, score:null };
+  const sfWinners = sf.map(m => getWinner(m));
+  const sfLosers = sf.map(m => getLoser(m));
+  const final = {
+    home: sfWinners[0] || '待定', away: sfWinners[1] || '待定',
+    id: KNOCKOUT.final.id, date: KNOCKOUT.final.date, time: KNOCKOUT.final.time,
+    venue: KNOCKOUT.final.venue, score: null,
+  };
+  const third = {
+    home: sfLosers[0] || '待定', away: sfLosers[1] || '待定',
+    id: KNOCKOUT.third.id, date: KNOCKOUT.third.date, time: KNOCKOUT.third.time,
+    venue: KNOCKOUT.third.venue, score: null,
+  };
 
   // ── Render ──
   let html = '<div class="bracket">';
@@ -781,21 +797,17 @@ function renderStats() {
   });
   const topScorers = Object.entries(teamGoals).sort((a,b) => b[1]-a[1]).slice(0,5);
 
-  // 接下来最值得关注的比赛 (半决赛)
+  // 接下来最值得关注的比赛 (决赛)
   const keyMatches = [];
-  const qfWinners = [];
-  for (let idx = 0; idx < 4; idx++) {
-    const res = QF_RESULTS[idx];
-    qfWinners[idx] = (res && res.winner) ? res.winner : null;
+  const sfWinnersArr = [];
+  for (let idx = 0; idx < 2; idx++) {
+    const res = SF_RESULTS[idx];
+    sfWinnersArr[idx] = (res && res.winner) ? res.winner : null;
   }
-  const SF_P = [[0,1],[2,3]];
-  SF_P.forEach(([i,j], sfIdx) => {
-    if (qfWinners[i] && qfWinners[j]) {
-      const sched = KNOCKOUT.sf[sfIdx];
-      const p = predict(qfWinners[i], qfWinners[j]);
-      keyMatches.push({ match: {home:qfWinners[i], away:qfWinners[j], date:sched.date, time:sched.time}, pred:p });
-    }
-  });
+  if (sfWinnersArr[0] && sfWinnersArr[1]) {
+    const p = predict(sfWinnersArr[0], sfWinnersArr[1]);
+    keyMatches.push({ match: {home:sfWinnersArr[0], away:sfWinnersArr[1], date:KNOCKOUT.final.date, time:KNOCKOUT.final.time, venue:KNOCKOUT.final.venue}, pred:p });
+  }
   // Also keep r16W for QF section below
   const r16W = [];
   for (let idx = 0; idx < 8; idx++) {
@@ -811,11 +823,13 @@ function renderStats() {
   html += `<div class="stat-card"><div class="stat-icon">🎯</div><div class="stat-value">${(totalGoals/done.length||0).toFixed(1)}</div><div class="stat-label">场均进球</div></div>`;
   const r16Completed = Object.keys(R16_RESULTS).length;
   const qfCompleted = Object.keys(QF_RESULTS).length;
+  const sfCompleted = Object.keys(SF_RESULTS).length;
   html += `<div class="stat-card"><div class="stat-icon">🏟️</div><div class="stat-value">16/16</div><div class="stat-label">32强已完赛</div></div>`;
-  html += `<div class="stat-card highlight"><div class="stat-icon">⚡</div><div class="stat-value">${upsets.length}</div><div class="stat-label">冷门场次</div></div>`;
   html += `<div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value">${r16Completed}/8</div><div class="stat-label">16强已完赛</div></div>`;
   html += `<div class="stat-card"><div class="stat-icon">🏆</div><div class="stat-value">4/4</div><div class="stat-label">¼决赛已完赛</div></div>`;
-  html += `<div class="stat-card highlight"><div class="stat-icon">🌟</div><div class="stat-value">4</div><div class="stat-label">已晋级半决赛</div></div>`;
+  html += `<div class="stat-card highlight"><div class="stat-icon">🌟</div><div class="stat-value">${sfCompleted}/2</div><div class="stat-label">半决赛已完赛</div></div>`;
+  html += `<div class="stat-card"><div class="stat-icon">⚡</div><div class="stat-value">${upsets.length}</div><div class="stat-label">冷门场次</div></div>`;
+  html += `<div class="stat-card highlight"><div class="stat-icon">👑</div><div class="stat-value">2</div><div class="stat-label">决赛球队确定</div></div>`;
   html += '</div>';
 
   // ── 已晋级球队 ──
@@ -860,7 +874,7 @@ function renderStats() {
         <div class="ins-icon">🤜</div>
         <div class="ins-body">
           <div class="ins-title">${FLAGS[m.home]||''} ${m.home} vs ${FLAGS[m.away]||''} ${m.away}</div>
-          <div class="ins-desc">🕐 ${m.date} ${m.time} · ${fav} 胜率 ${favPct}% · xG ${p.xgH}-${p.xgA} · ${p.verdict.text}</div>
+          <div class="ins-desc">🕐 ${m.date} ${m.time} · ${m.venue||''} · ${fav} 胜率 ${favPct}% · xG ${p.xgH}-${p.xgA} · ${p.verdict.text}</div>
         </div></div>`;
     }
     html += '</div>';
@@ -956,8 +970,8 @@ function renderStats() {
     html += '</div>';
   }
 
-  // ── 半决赛 ──
-  const sfConfirmed = [];
+  // ── 半决赛战报 ──
+  const sfDone = [], sfUpcoming = [];
   const qfW = [];
   for (let idx = 0; idx < 4; idx++) {
     const res = QF_RESULTS[idx];
@@ -966,21 +980,69 @@ function renderStats() {
   const SF_P2 = [[0,1],[2,3]];
   SF_P2.forEach(([i,j], sfIdx) => {
     if (qfW[i] && qfW[j]) {
-      sfConfirmed.push({home: qfW[i], away: qfW[j], sched: KNOCKOUT.sf[sfIdx]});
+      const res = SF_RESULTS[sfIdx];
+      if (res && res.winner) {
+        sfDone.push({home: qfW[i], away: qfW[j], sched: KNOCKOUT.sf[sfIdx], result: res});
+      } else {
+        sfUpcoming.push({home: qfW[i], away: qfW[j], sched: KNOCKOUT.sf[sfIdx]});
+      }
     }
   });
-  if (sfConfirmed.length > 0) {
-    html += '<div class="section-title" style="margin-top:20px">🌟 半决赛对阵</div>';
+
+  if (sfDone.length > 0) {
+    html += '<div class="section-title" style="margin-top:20px">🌟 半决赛战报</div>';
     html += '<div class="insight-list">';
-    for (const s of sfConfirmed) {
+    for (const s of sfDone) {
+      const wf = FLAGS[s.result.winner] || '🏆';
+      html += `<div class="insight-item upset" style="border-left-color:var(--green)">
+        <div class="ins-icon">🏟️</div>
+        <div class="ins-body">
+          <div class="ins-title">${wf} ${s.result.winner} 晋级决赛！ ${FLAGS[s.home]||''} ${s.home} ${s.result.score} ${FLAGS[s.away]||''} ${s.away}</div>
+          <div class="ins-desc">${s.sched.id} · ${s.sched.date} · ${s.sched.venue}</div>
+        </div></div>`;
+    }
+    html += '</div>';
+  }
+
+  if (sfUpcoming.length > 0) {
+    html += '<div class="section-title" style="margin-top:20px">🔮 半决赛即将开赛</div>';
+    html += '<div class="insight-list">';
+    for (const s of sfUpcoming) {
       const p = predict(s.home, s.away);
       html += `<div class="insight-item highlight-ins">
-        <div class="ins-icon">🏟️</div>
+        <div class="ins-icon">⚔️</div>
         <div class="ins-body">
           <div class="ins-title">${FLAGS[s.home]||''} ${s.home} vs ${FLAGS[s.away]||''} ${s.away}</div>
           <div class="ins-desc">${s.sched.id} · 🕐 ${s.sched.date} ${s.sched.time} · ${s.sched.venue} · 预测: ${p.verdict.text}</div>
         </div></div>`;
     }
+    html += '</div>';
+  }
+
+  // ── 决赛 & 三四名 ──
+  if (sfDone.length >= 2) {
+    const finalHome = sfDone[0].result.winner;
+    const finalAway = sfDone[1].result.winner;
+    const loser0 = finalHome === sfDone[0].home ? sfDone[0].away : sfDone[0].home;
+    const loser1 = finalAway === sfDone[1].home ? sfDone[1].away : sfDone[1].home;
+    html += '<div class="section-title" style="margin-top:20px">👑 决赛 & 三四名决赛</div>';
+    html += '<div class="insight-list">';
+    // 决赛
+    const pFinal = predict(finalHome, finalAway);
+    html += `<div class="insight-item highlight-ins" style="border-left-color:var(--gold)">
+      <div class="ins-icon">🏆</div>
+      <div class="ins-body">
+        <div class="ins-title">${FLAGS[finalHome]||''} ${finalHome} vs ${FLAGS[finalAway]||''} ${finalAway}</div>
+        <div class="ins-desc">🏆 决赛 · 🕐 ${KNOCKOUT.final.date} ${KNOCKOUT.final.time} · ${KNOCKOUT.final.venue} · 预测: ${pFinal.verdict.text}</div>
+      </div></div>`;
+    // 三四名
+    const pThird = predict(loser0, loser1);
+    html += `<div class="insight-item neutral">
+      <div class="ins-icon">🥉</div>
+      <div class="ins-body">
+        <div class="ins-title">${FLAGS[loser0]||''} ${loser0} vs ${FLAGS[loser1]||''} ${loser1}</div>
+        <div class="ins-desc">🥉 三四名 · 🕐 ${KNOCKOUT.third.date} ${KNOCKOUT.third.time} · ${KNOCKOUT.third.venue} · 预测: ${pThird.verdict.text}</div>
+      </div></div>`;
     html += '</div>';
   }
 
